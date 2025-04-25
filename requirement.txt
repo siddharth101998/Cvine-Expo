@@ -1,0 +1,11 @@
+firebase
+axios
+
+# React Navigation core and dependencies
+@react-navigation/native
+@react-navigation/native-stack
+react-native-screens
+react-native-safe-area-context
+react-native-gesture-handler
+react-native-reanimated
+react-native-vector-icons
