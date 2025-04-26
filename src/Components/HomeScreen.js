@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 const API_BASE_URL = "http://localhost:5002";
 // const API_BASE_URL = 'https://a19b-2601-86-0-1580-e45b-5c-b3e1-ec58.ngrok-free.app';
-
+import { useAuth } from '../authContext/AuthContext';
 const HomeScreen = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [searchText, setSearchText] = useState('');
@@ -29,6 +29,7 @@ const HomeScreen = () => {
     const [selectedGrapeType, setSelectedGrapeType] = useState('');
     const [showFilters, setShowFilters] = useState(false);
     const navigation = useNavigation();
+    const { user, updateUser } = useAuth();
     const handleScan = () => {
         navigation.navigate('Scan');
     };
@@ -36,6 +37,7 @@ const HomeScreen = () => {
         fetchCountries();
         fetchWineTypes();
         fetchGrapeTypes();
+        console.log("user details", user)
     }, []);
 
     const fetchCountries = async () => {
@@ -197,6 +199,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f0f0f0',
         padding: 16,
+        top: 10
     },
     searchBox: {
         flexDirection: 'row',

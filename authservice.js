@@ -5,7 +5,7 @@ import {
     signOut,
 } from 'firebase/auth';
 import axios from 'axios';
-
+import { useAuth } from './src/authContext/AuthContext';
 // 🔧 Replace this with your actual IP if you're calling a local backend
 const API_BASE_URL = "http://localhost:5002";
 // const API_BASE_URL = 'https://a19b-2601-86-0-1580-e45b-5c-b3e1-ec58.ngrok-free.app';
@@ -40,6 +40,7 @@ export const registerUser = async (email, password, firstName) => {
 // 🔓 Login User
 export const loginUser = async (email, password) => {
     try {
+
         const userCredential = await signInWithEmailAndPassword(
             auth,
             email,
@@ -53,7 +54,7 @@ export const loginUser = async (email, password) => {
             password,
         });
 
-        return user;
+        return res.data.user;
     } catch (error) {
         throw error;
     }

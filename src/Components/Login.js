@@ -13,13 +13,13 @@ import {
 import { loginUser, registerUser } from '../../authservice';
 //import logo from '../assets/logo.png'; // Ensure the file exists
 import { useNavigation } from '@react-navigation/native';
-
+import { useAuth } from '../authContext/AuthContext';
 const LoginScreen = () => {
     const [isRegister, setIsRegister] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [firstName, setFirstName] = useState('');
-
+    const { login } = useAuth();
     const navigation = useNavigation();
 
     const handleSubmit = async () => {
@@ -37,8 +37,10 @@ const LoginScreen = () => {
                 setIsRegister(false)
             } else {
                 console.log("started")
-                await loginUser(email, password);
-                navigation.navigate("Home"); // Make sure Home screen exists in your navigator
+                const res = await loginUser(email, password);
+
+                login(res);
+                navigation.navigate("Main"); // Make sure Home screen exists in your navigator
             }
         } catch (err) {
             Alert.alert("Error", err.message || "Something went wrong");
