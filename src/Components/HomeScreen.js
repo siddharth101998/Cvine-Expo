@@ -15,6 +15,7 @@ import axios from 'axios';
 import debounce from 'lodash.debounce';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import logo from '../../assets/logo.png';
 const API_BASE_URL = "http://localhost:5002";
 // const API_BASE_URL = 'https://a19b-2601-86-0-1580-e45b-5c-b3e1-ec58.ngrok-free.app';
 import { useAuth } from '../authContext/AuthContext';
@@ -119,7 +120,7 @@ const HomeScreen = () => {
 
     return (
         <ScrollView style={styles.container}>
-            <View style={styles.searchBox}>
+            {/* <View style={styles.searchBox}>
                 <Ionicons name="search" size={20} color="gray" style={{ marginRight: 8 }} />
                 <TextInput
                     placeholder="Search for a wine..."
@@ -131,22 +132,25 @@ const HomeScreen = () => {
 
             {loading && <ActivityIndicator style={{ marginVertical: 10 }} />}
 
-            {/* <FlatList
-                data={searchResults.slice(0, 3)}
-                keyExtractor={(item) => item._id}
-                renderItem={({ item }) => (
-                    <TouchableOpacity style={styles.resultBox} onPress={() => handleBottleClick(item._id)}>
-                        <Text style={styles.resultTitle}>{item.name}</Text>
-                        <Text style={styles.resultSubtitle}>{item.winery}</Text>
-                    </TouchableOpacity>
-                )}
-            /> */}
+            
             {searchResults.slice(0, 3).map((item) => (
                 <TouchableOpacity key={item._id} style={styles.resultBox} onPress={() => handleBottleClick(item._id)}>
                     <Text>{item.name}</Text>
                     <Text>{item.winery}</Text>
                 </TouchableOpacity>
-            ))}
+            ))} */}
+            <View style={styles.logoContainer}>
+                <Image source={logo} style={styles.logo} resizeMode="contain" />
+                <View style={styles.iconGroup}>
+                    <TouchableOpacity onPress={() => navigation.navigate('Search')}>
+                        <Ionicons name="search" size={24} color="gray" style={{ marginRight: 15 }} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                        <Ionicons name="person-circle" size={28} color="gray" />
+                    </TouchableOpacity>
+                </View>
+            </View>
+
 
             <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
                 <Ionicons name="filter" size={18} />
@@ -201,15 +205,10 @@ const HomeScreen = () => {
 
             {/* Trending Section */}
             <Text style={[styles.filterLabel, { marginTop: 20 }]}>Trending Wines</Text>
-            <FlatList
-                data={trending.data}
-                showsVerticalScrollIndicator={false}
-                keyExtractor={(item) => item._id}
-                numColumns={2}
-                columnWrapperStyle={{ justifyContent: 'space-between' }}
-                contentContainerStyle={{ paddingVertical: 10 }}
-                renderItem={({ item }) => (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingVertical: 10 }}>
+                {trending.data?.map((item) => (
                     <TouchableOpacity
+                        key={item._id}
                         onPress={() => handleBottleClick(item._id)}
                         style={[styles.trendingItem, { marginBottom: 12 }]}
                     >
@@ -222,8 +221,8 @@ const HomeScreen = () => {
                         </View>
                         <Text style={styles.trendingName} numberOfLines={2}>{item.name}</Text>
                     </TouchableOpacity>
-                )}
-            />
+                ))}
+            </View>
 
         </ScrollView>
     );
@@ -236,7 +235,9 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f0f0f0',
         padding: 16,
-        top: 10
+        paddingTop: 5,
+        top: 70,
+
     },
     searchBox: {
         flexDirection: 'row',
@@ -332,5 +333,21 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         textAlign: 'center'
+    },
+    logoContainer: {
+        display: 'flex',
+        flexDirection: 'row',
+        //marginBottom: 10,
+        justifyContent: 'space-between',
+        alignItems: 'center',
+
+    },
+    logo: {
+        width: 60,
+        height: 50,
+    },
+    iconGroup: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
 });

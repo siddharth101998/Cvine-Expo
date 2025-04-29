@@ -40,7 +40,7 @@ const LoginScreen = () => {
                 const res = await loginUser(email, password);
 
                 login(res);
-                navigation.navigate("Main"); // Make sure Home screen exists in your navigator
+                navigation.navigate("Home"); // Make sure Home screen exists in your navigator
             }
         } catch (err) {
             Alert.alert("Error", err.message || "Something went wrong");
