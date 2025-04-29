@@ -15,6 +15,7 @@ import { AuthProvider } from './src/authContext/AuthContext';
 import ChatScreen from './src/Components/Chat';
 import SearchPage from './src/Components/SearchPage';
 import Navbar from './src/Components/NavbarTabs';
+import ProfileScreen from './src/Components/Profile/Profile_Screen';
 
 const Stack = createNativeStackNavigator();
 
@@ -62,6 +63,9 @@ export default function App() {
           </Stack.Screen>
           <Stack.Screen name="Search" options={{ headerShown: false }}>
             {() => <ScreenWithNavbar><SearchPage /></ScreenWithNavbar>}
+          </Stack.Screen>
+          <Stack.Screen name="Profile" options={{ headerShown: false }}>
+            {() => (<ScreenWithNavbar><ProfileScreen /></ScreenWithNavbar>)}
           </Stack.Screen>
         </Stack.Navigator>
       </NavigationContainer>
