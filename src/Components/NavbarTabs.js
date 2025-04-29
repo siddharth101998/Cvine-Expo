@@ -84,14 +84,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 40
+        gap: 20
     },
     rightsideTab: {
         marginLeft: 5,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 50
+        gap: 40
     },
     tabItem: {
         alignItems: 'center',
@@ -104,13 +104,13 @@ const styles = StyleSheet.create({
     scanButtonWrapper: {
         position: 'absolute',
         alignItems: 'center',
-        top: -30,
-        left: '56%',
+        top: 10,
+        left: '59%',
         transform: [{ translateX: -30 }],
     },
     scanButton: {
-        width: 60,
-        height: 60,
+        width: 50,
+        height: 50,
         borderRadius: 30,
         backgroundColor: '#2E8B57',
         justifyContent: 'center',
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     eachSidetab: {
         display: "flex",
         flexDirection: 'row',
-        gap: 53,
+        gap: 90,
         padding: 5
     }
 });

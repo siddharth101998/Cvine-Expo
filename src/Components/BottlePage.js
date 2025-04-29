@@ -7,19 +7,24 @@ import {
     ActivityIndicator,
     ScrollView,
     Dimensions,
+    TouchableOpacity,
 } from 'react-native';
 import axios from 'axios';
 import { useRoute } from '@react-navigation/native';
+import { useAuth } from '../authContext/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
 const API_BASE_URL = "http://localhost:5002";
 // const API_BASE_URL = 'https://a19b-2601-86-0-1580-e45b-5c-b3e1-ec58.ngrok-free.app';
 
 const BottlePage = () => {
     const route = useRoute();
+    const { user } = useAuth();
     const { id } = route.params;
     const [bottle, setBottle] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showFullDesc, setShowFullDesc] = useState(false);
+    const [isWishlisted, setIsWishlisted] = useState(false);
     const capitalizeWords = (str) =>
         str
             ?.toLowerCase()
@@ -32,6 +37,21 @@ const BottlePage = () => {
                 const response = await axios.get(`${API_BASE_URL}/bottle/${id}`);
                 console.log("bottle page", response.data)
                 setBottle(response.data.data);
+                if (user && response.data?.data?._id) {
+                    try {
+                        await axios.post(`${API_BASE_URL}/searchHistory/`, {
+                            userId: user._id,
+                            bottle: response.data.data
+                        });
+
+                        const wishlistRes = await axios.get(`${API_BASE_URL}/wishlist/${user._id}`);
+                        const wishlist = wishlistRes.data?.bottles || [];
+                        const found = wishlist.find(item => item._id === response.data.data._id);
+                        setIsWishlisted(!!found);
+                    } catch (err) {
+                        console.error('Wishlist or history fetch failed:', err);
+                    }
+                }
             } catch (err) {
                 setError('Failed to load bottle details.');
             } finally {
@@ -42,6 +62,20 @@ const BottlePage = () => {
         fetchBottle();
     }, [id]);
 
+    const toggleWishlist = async () => {
+        if (!user) return;
+        try {
+            await axios.post(`${API_BASE_URL}/wishlist/toggle`, {
+                userId: user._id,
+                bottleId: bottle._id
+            });
+            console.log("wishlist", !isWishlisted);
+            setIsWishlisted(prev => !prev);
+        } catch (err) {
+            console.error('Failed to toggle wishlist:', err);
+        }
+    };
+
     if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" color="#b22222" />;
     if (error) return <Text style={styles.error}>{error}</Text>;
 
@@ -49,7 +83,16 @@ const BottlePage = () => {
         <ScrollView style={styles.container}>
             <View style={styles.centeredContent}>
                 <Text style={styles.bottleName}>{bottle.name}</Text>
-                <Image source={{ uri: bottle.imageUrl }} style={styles.image} resizeMode="contain" />
+                <View style={styles.imageWrapper}>
+                    <Image source={{ uri: bottle.imageUrl }} style={styles.image} resizeMode="contain" />
+                    <TouchableOpacity onPress={toggleWishlist} style={styles.heartIcon}>
+                        <Ionicons
+                            name={isWishlisted ? 'heart' : 'heart-outline'}
+                            size={28}
+                            color="#B22222"
+                        />
+                    </TouchableOpacity>
+                </View>
 
                 <Text style={styles.descriptionText} numberOfLines={showFullDesc ? undefined : 4}>
                     {bottle.fullDescription}
@@ -80,6 +123,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fcf8f5',
+        top: 50
     },
     centeredContent: {
         padding: 20,
@@ -149,4 +193,20 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 10
     },
+    imageWrapper: {
+        position: 'relative',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+    },
+    heartIcon: {
+        position: 'absolute',
+        top: 0,
+        right: 20,
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        padding: 4,
+        elevation: 3,
+    },
 });
+

@@ -22,6 +22,7 @@ const ProfileScreen = () => {
     if (!user) return;
     try {
       const res = await axios.get(`http://localhost:5002/wishlist/${user._id}`);
+      console.log(res.data.bottles)
       setWishlistBottles(res.data.bottles);
     } catch (error) {
       console.error("Error fetching wishlist bottles:", error);
@@ -29,39 +30,48 @@ const ProfileScreen = () => {
   };
 
 
+  // const fetchSearchHistory = async () => {
+  //   if (!user) return;
+  //   try {
+  //     const res = await axios.get(`http://localhost:5002/searchHistory/${user._id}`);
+  //     const payload = res.data;
+  //     // Determine array of history entries
+  //     const historyItems = Array.isArray(payload)
+  //       ? payload
+  //       : payload.bottles
+  //       ? payload.bottles
+  //       : payload.searchHistory
+  //       ? payload.searchHistory
+  //       : [];
+  //     // Extract names: if each item is a bottle object, take its name; 
+  //     // if it's a record with its own bottles array, dig into that; otherwise skip.
+  //     const names = historyItems.flatMap(item => {
+  //       if (item.name) {
+  //         // direct bottle object
+  //         return item.name;
+  //       } else if (item.bottles && Array.isArray(item.bottles)) {
+  //         // record with bottles array
+  //         return item.bottles.map(b => b.name);
+  //       }
+  //       return [];
+  //     });
+  //     // remove duplicates
+  //     const uniqueNames = Array.from(new Set(names));
+  //     setSearchHistory(uniqueNames);
+  //   } catch (error) {
+  //     console.error("Error fetching search history:", error);
+  //   }
+  // };
   const fetchSearchHistory = async () => {
     if (!user) return;
     try {
       const res = await axios.get(`http://localhost:5002/searchHistory/${user._id}`);
-      const payload = res.data;
-      // Determine array of history entries
-      const historyItems = Array.isArray(payload)
-        ? payload
-        : payload.bottles
-        ? payload.bottles
-        : payload.searchHistory
-        ? payload.searchHistory
-        : [];
-      // Extract names: if each item is a bottle object, take its name; 
-      // if it's a record with its own bottles array, dig into that; otherwise skip.
-      const names = historyItems.flatMap(item => {
-        if (item.name) {
-          // direct bottle object
-          return item.name;
-        } else if (item.bottles && Array.isArray(item.bottles)) {
-          // record with bottles array
-          return item.bottles.map(b => b.name);
-        }
-        return [];
-      });
-      // remove duplicates
-      const uniqueNames = Array.from(new Set(names));
-      setSearchHistory(uniqueNames);
+      console.log("searchhistory response:", res.data.length);
+      setSearchHistory(res.data);
     } catch (error) {
-      console.error("Error fetching search history:", error);
+      console.error("Error fetching search bottles:", error);
     }
   };
-
   const pickImage = async () => {
     // request permission
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -124,21 +134,21 @@ const ProfileScreen = () => {
     >
       {/* Gradient Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => {/* settings action */}}>
+        <TouchableOpacity onPress={() => {/* settings action */ }}>
           <Ionicons name="settings-outline" size={24} color="black" />
         </TouchableOpacity>
       </View>
-        {/* Avatar and name */}
-        <View style={styles.avatarContainer}>
-          <TouchableOpacity onPress={pickImage}>
-            {profileImageUri ? (
-              <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
-            ) : (
-              <Ionicons name="person-circle-outline" size={100} color="black" />
-            )}
-          </TouchableOpacity>
-          <Text style={styles.usernameWhite}>{user.username}</Text>
-        </View>
+      {/* Avatar and name */}
+      <View style={styles.avatarContainer}>
+        <TouchableOpacity onPress={pickImage}>
+          {profileImageUri ? (
+            <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
+          ) : (
+            <Ionicons name="person-circle-outline" size={100} color="black" />
+          )}
+        </TouchableOpacity>
+        <Text style={styles.usernameWhite}>{user.username}</Text>
+      </View>
 
       {/* Stats Row Overlap */}
       <View style={styles.statsOverlay}>
@@ -189,6 +199,7 @@ const ProfileScreen = () => {
       {/* Tab Content */}
       {activeTab === 'wishlist' ? (
         wishlistBottles.map((item, idx) => (
+
           <TouchableOpacity
             key={item._id ?? idx.toString()}
             style={styles.listItem}
@@ -200,10 +211,17 @@ const ProfileScreen = () => {
         ))
       ) : (
         <View style={styles.section}>
-          {searchHistory.map((name, idx) => (
-            <View key={idx} style={styles.listItem}>
-              <Text style={styles.listText}>{name}</Text>
-            </View>
+          {searchHistory.map((item, idx) => (
+
+            <TouchableOpacity
+              key={item._id ?? idx.toString()}
+              style={styles.listItem}
+              onPress={() => navigation.navigate('Bottle', { id: item.bottle._id })}
+
+            >
+              <Image source={{ uri: item.bottle.imageUrl }} style={styles.cardImage} />
+              <Text style={styles.listText}>{item.bottle.name}</Text>
+            </TouchableOpacity>
           ))}
         </View>
       )}
@@ -217,7 +235,7 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f5fa',
-    top:5,
+    top: 5,
   },
   header: {
     flexDirection: 'row',
@@ -304,6 +322,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   listItem: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -355,5 +376,6 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 8,
     marginRight: 12,
+    objectFit: 'contain'
   },
 });
