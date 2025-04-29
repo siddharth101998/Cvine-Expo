@@ -9,6 +9,7 @@ import {
     ActivityIndicator,
     ScrollView,
     Platform,
+    Image // <-- Add this
 } from 'react-native';
 import axios from 'axios';
 import debounce from 'lodash.debounce';
@@ -24,6 +25,7 @@ const HomeScreen = () => {
     const [countries, setCountries] = useState([]);
     const [wineTypes, setWineTypes] = useState([]);
     const [grapeTypes, setGrapeTypes] = useState([]);
+    const [trending, setTrending] = useState([]);
     const [selectedCountry, setSelectedCountry] = useState('');
     const [selectedWineType, setSelectedWineType] = useState('');
     const [selectedGrapeType, setSelectedGrapeType] = useState('');
@@ -37,6 +39,7 @@ const HomeScreen = () => {
         fetchCountries();
         fetchWineTypes();
         fetchGrapeTypes();
+        fetchTrending();
         console.log("user details", user)
     }, []);
 
@@ -66,6 +69,17 @@ const HomeScreen = () => {
             console.error("Error fetching grape types:", error);
         }
     };
+    const fetchTrending = async () => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/bottle/trending`);
+            console.log("resss", response.data)
+            setTrending(response.data);
+        } catch (error) {
+            console.error("Error fetching trending items:", error);
+        }
+    };
+
+
 
     const fetchBottles = async (query) => {
         if (!query) {
@@ -184,10 +198,33 @@ const HomeScreen = () => {
                     </ScrollView>
                 </View>
             )}
-            <TouchableOpacity onPress={handleScan} style={styles.scanButton}>
-                <Ionicons name="camera" size={20} color="#fff" style={{ marginRight: 6 }} />
-                <Text style={styles.scanText}>Scan</Text>
-            </TouchableOpacity>
+
+            {/* Trending Section */}
+            <Text style={[styles.filterLabel, { marginTop: 20 }]}>Trending Wines</Text>
+            <FlatList
+                data={trending.data}
+                showsVerticalScrollIndicator={false}
+                keyExtractor={(item) => item._id}
+                numColumns={2}
+                columnWrapperStyle={{ justifyContent: 'space-between' }}
+                contentContainerStyle={{ paddingVertical: 10 }}
+                renderItem={({ item }) => (
+                    <TouchableOpacity
+                        onPress={() => handleBottleClick(item._id)}
+                        style={[styles.trendingItem, { marginBottom: 12 }]}
+                    >
+                        <View style={styles.trendingImageBox}>
+                            <Image
+                                source={{ uri: item.imageUrl }}
+                                style={styles.trendingImage}
+                                resizeMode="cover"
+                            />
+                        </View>
+                        <Text style={styles.trendingName} numberOfLines={2}>{item.name}</Text>
+                    </TouchableOpacity>
+                )}
+            />
+
         </ScrollView>
     );
 };
@@ -270,5 +307,30 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    trendingItem: {
+        width: 170,
+
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        padding: 8,
+        elevation: 2,
+
+    },
+    trendingImageBox: {
+        height: 150,
+        borderRadius: 10,
+        overflow: 'hidden',
+        marginBottom: 8,
+    },
+    trendingImage: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain'
+    },
+    trendingName: {
+        fontSize: 14,
+        fontWeight: '600',
+        textAlign: 'center'
     },
 });

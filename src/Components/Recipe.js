@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useAuth } from '../authContext/AuthContext';
-
+import debounce from 'lodash.debounce';
 const API_BASE_URL = 'http://localhost:5002'; // Update for production
 
 const RecipePage = () => {
@@ -26,12 +26,16 @@ const RecipePage = () => {
         name: '',
         items: [],
         method: '',
-        bottles: [],
+        bottles: [], // array of { id, name, image }
     });
     const [currentItem, setCurrentItem] = useState({ itemName: '', quantity: '' });
-
+    const [availableBottles, setAvailableBottles] = useState([]);
+    const [selectedBottle, setSelectedBottle] = useState(null);
+    const [bottleSearchText, setBottleSearchText] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
     useEffect(() => {
         fetchRecipes();
+        fetchBottles();
     }, []);
 
     const fetchRecipes = async () => {
@@ -44,6 +48,19 @@ const RecipePage = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const fetchBottles = async () => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/bottle/`);
+            setAvailableBottles(response.data);
+        } catch (error) {
+            console.error('Error fetching bottles:', error);
+        }
+    };
+    const handleSearchbottle = (text) => {
+        setBottleSearchText(text);
+        debouncedSearch(text);
     };
 
     const handleAddItem = () => {
@@ -121,13 +138,47 @@ const RecipePage = () => {
             prev.map((r) => (r._id === updatedRecipe._id ? updatedRecipe : r))
         );
     };
+    const fetchsearchBottles = async (query) => {
+        if (!query) {
+            setSearchResults([]);
+            return;
+        }
+
+        try {
+            const response = await axios.get(`${API_BASE_URL}/bottle/search`, {
+                params: {
+                    q: query,
+
+                },
+            });
+            setSearchResults(response.data.data);
+            console.log("bottles", response.data)
+        } catch (error) {
+            console.error("Error fetching search results:", error);
+        }
+
+    };
 
     const filteredRecipes = recipes.filter((r) =>
         r.name?.toLowerCase().includes(searchTerm.toLowerCase())
     );
+    const debouncedSearch = debounce((query) => {
+        fetchsearchBottles(query);
+    }, 300);
 
     if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" color="#b22222" />;
 
+    // (text) => {
+    //     console.log("tes", text)
+    //     setBottleSearchText(text); // allow user to type freely
+    //     if (Array.isArray(availableBottles)) {
+    //         const match = availableBottles.find((bottle) =>
+    //             bottle.name.toLowerCase().includes(text.toLowerCase())
+    //         );
+    //         if (match) setSelectedBottle(match);
+    //         else setSelectedBottle(null);
+    //     }
+    // }
     return (
         <ScrollView style={styles.container}>
             <View style={styles.inner}>
@@ -177,6 +228,69 @@ const RecipePage = () => {
                         {newRecipe.items.map((item, idx) => (
                             <Text key={idx} style={styles.itemText}>
                                 - {item.itemName}: {item.quantity}
+                            </Text>
+                        ))}
+
+                        <Text style={styles.subHeader}>Select Bottle:</Text>
+                        <View style={styles.row}>
+                            <TextInput
+                                style={[styles.input, { flex: 1 }]}
+                                placeholder="Search Bottles..."
+                                value={bottleSearchText}
+                                onChangeText={handleSearchbottle}
+                            />
+
+                            {/* <TouchableOpacity style={styles.smallButton} onPress={() => {
+                                if (selectedBottle) {
+                                    setNewRecipe((prev) => ({
+                                        ...prev,
+                                        bottles: [
+                                            ...prev.bottles,
+                                            {
+                                                id: selectedBottle._id,
+                                                name: selectedBottle.name,
+                                                image: selectedBottle.image,
+                                            },
+                                        ],
+                                    }));
+                                    setSelectedBottle(null);
+                                    setBottleSearchText(''); // reset search field
+                                }
+                            }}>
+                                <Ionicons name="add-circle" size={28} color="#B22222" />
+                            </TouchableOpacity> */}
+                        </View>
+                        <View style={styles.row}>
+                            {searchResults.length > 0 && (
+                                <View style={styles.dropdown}>
+                                    <ScrollView style={{ maxHeight: 150 }}>
+                                        {searchResults.map((bottle) => (
+                                            <TouchableOpacity
+                                                key={bottle._id}
+                                                style={styles.dropdownItem}
+                                                onPress={() => {
+                                                    setNewRecipe((prev) => ({
+                                                        ...prev,
+                                                        bottles: [
+                                                            ...prev.bottles,
+                                                            { id: bottle._id, name: bottle.name, image: bottle.image },
+                                                        ],
+                                                    }));
+                                                    setBottleSearchText('');
+                                                    setSearchResults([]);
+                                                }}
+                                            >
+                                                <Text>{bottle.name}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            )}
+                        </View>
+                        <Text style={styles.subHeader}>Selected Bottles:</Text>
+                        {newRecipe.bottles.map((bottle, idx) => (
+                            <Text key={idx} style={styles.itemText}>
+                                - {bottle.name}
                             </Text>
                         ))}
 
@@ -252,7 +366,7 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: '600',
         color: '#3e3e3e',
-        marginBottom: 16,
+        marginBottom: 10,
     },
     input: {
         backgroundColor: '#fff',
@@ -286,7 +400,7 @@ const styles = StyleSheet.create({
     row: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12,
+
     },
     smallButton: {
         marginLeft: 8,
@@ -294,8 +408,8 @@ const styles = StyleSheet.create({
     subHeader: {
         fontSize: 16,
         fontWeight: '600',
-        marginTop: 8,
-        marginBottom: 4,
+        marginTop: 2,
+        marginBottom: 2,
         color: '#333',
     },
     itemText: {
