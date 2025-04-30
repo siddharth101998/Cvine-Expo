@@ -37,14 +37,21 @@ const Recommendation = ({ }) => {
     const [searchResults, setSearchResults] = useState([]);
     const [selectedBottles, setSelectedBottles] = useState([]);
     const [getrecommendations, setGetRecommendations] = useState([]);
+    const [showSearch, setShowSearch] = useState(true);
     const navigation = useNavigation();
     useEffect(() => {
         const fetchStoredRecommendations = async () => {
             try {
                 const stored = await AsyncStorage.getItem('wineRecommendations');
+                const recstored = await AsyncStorage.getItem('getwineRecommendations');
                 if (stored) {
                     console.log("recommmm", JSON.parse(stored))
                     setRecommendations(JSON.parse(stored));
+                }
+                if (recstored) {
+
+                    setGetRecommendations(JSON.parse(recstored));
+                    setShowSearch(false);
                 }
             } catch (e) {
                 console.error('Failed to load stored recommendations', e);
@@ -99,15 +106,32 @@ const Recommendation = ({ }) => {
             });
             setGetRecommendations(response.data.recommendations);
             await AsyncStorage.setItem(
-                'wineRecommendations',
+                'getwineRecommendations',
                 JSON.stringify(response.data.recommendations)
             );
-            setIndex(0); // Switch to Personalized tab to view recommendations
+            setShowSearch(false);
+            //setIndex(0); // Switch to Personalized tab to view recommendations
         } catch (error) {
             console.error('Error fetching recommendations:', error);
         }
         setLoading(false);
     };
+    const handleNewRecommendation = () => {
+        setShowSearch(true);
+        setSelectedBottles([]);
+        setSearchText('');
+        setSearchResults([]);
+        setGetRecommendations([]);
+    };
+    const handleshowRecommendations = () => {
+        setShowSearch(false);
+        handleGetRecommendations()
+        setSelectedBottles([]);
+        setSearchText('');
+        setSearchResults([]);
+
+    }
+
 
     const PersonalizedRoute = () => (
         <ScrollView style={styles.inner}>
@@ -145,55 +169,105 @@ const Recommendation = ({ }) => {
             style={{ flex: 1 }}
         >
             <View style={{ flex: 1 }}>
-                {/* Search Field - OUTSIDE ScrollView */}
-                <View style={[styles.inner, { paddingBottom: 0 }]}>
-                    <View style={styles.searchBox}>
-                        <Ionicons name="search" size={20} color="gray" style={{ marginRight: 8 }} />
-                        <TextInput
-                            placeholder="Search for a wine..."
-                            value={searchText}
-                            onChangeText={handleSearch}
-                            style={styles.input}
-                        />
-                    </View>
-                </View>
-
-                {/* Scrollable Area */}
-                <View>
-                    {/* Selected Bottles */}
-                    {selectedBottles.length > 0 && (
-                        <View style={styles.selectedContainer}>
-                            <Text style={styles.selectedTitle}>Selected Bottles:</Text>
-                            {selectedBottles.map((bottle) => (
-                                <Text key={bottle._id} style={styles.selectedBottle}>• {bottle.name}</Text>
-                            ))}
-                            <TouchableOpacity style={styles.addButton} onPress={handleGetRecommendations}>
-                                <Text style={styles.addButtonText}>Get Recommendations</Text>
+                {showSearch ? (
+                    <>
+                        <View style={[styles.inner, { paddingBottom: 0 }]}>
+                            <View style={styles.searchBox}>
+                                <Ionicons
+                                    name="search"
+                                    size={20}
+                                    color="gray"
+                                    style={{ marginRight: 8 }}
+                                />
+                                <TextInput
+                                    placeholder="Search for a wine..."
+                                    value={searchText}
+                                    onChangeText={handleSearch}
+                                    style={styles.input}
+                                />
+                            </View>
+                            <TouchableOpacity
+                                style={styles.addButton}
+                                onPress={handleshowRecommendations}
+                            >
+                                <Text style={styles.addButtonText}>Get New Recommendations</Text>
                             </TouchableOpacity>
                         </View>
-                    )}
 
-                    {/* Search Results Dropdown */}
-                    <View style={{ maxHeight: 200 }}>
-
-                        {searchResults.map((item) => (
-                            <TouchableOpacity
-                                key={item._id}
-                                style={styles.resultBox}
-                                onPress={() => handleBottleSelect(item)}
-                            >
-                                <View style={styles.resultRow}>
-                                    <Image source={{ uri: item.imageUrl }} style={styles.bottleImage} />
-                                    <View style={{ marginLeft: 10 }}>
-                                        <Text style={styles.resultTitle}>{item.name}</Text>
-                                        <Text style={styles.resultSubtitle}>{item.winery}</Text>
-                                    </View>
+                        <View>
+                            {selectedBottles.length > 0 && (
+                                <View style={styles.selectedContainer}>
+                                    <Text style={styles.selectedTitle}>Selected Bottles:</Text>
+                                    {selectedBottles.map((bottle) => (
+                                        <Text key={bottle._id} style={styles.selectedBottle}>
+                                            • {bottle.name}
+                                        </Text>
+                                    ))}
                                 </View>
-                            </TouchableOpacity>
-                        ))}
+                            )}
 
+                            <View style={{ maxHeight: 200 }}>
+                                {searchResults.map((item) => (
+                                    <TouchableOpacity
+                                        key={item._id}
+                                        style={styles.resultBox}
+                                        onPress={() => handleBottleSelect(item)}
+                                    >
+                                        <View style={styles.resultRow}>
+                                            <Image
+                                                source={{ uri: item.imageUrl }}
+                                                style={styles.bottleImage}
+                                            />
+                                            <View style={{ marginLeft: 10 }}>
+                                                <Text style={styles.resultTitle}>{item.name}</Text>
+                                                <Text style={styles.resultSubtitle}>{item.winery}</Text>
+                                            </View>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+                    </>
+                ) : (
+                    <View style={styles.inner}>
+                        <TouchableOpacity
+                            style={styles.addButton}
+                            onPress={handleNewRecommendation}
+                        >
+                            <Text style={styles.addButtonText}>Get New Recommendations</Text>
+                        </TouchableOpacity>
+                        <ScrollView style={styles.inner}>
+                            {getrecommendations.length > 0 ? (
+                                getrecommendations.map((wine, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={styles.card}
+                                        onPress={() =>
+                                            navigation.navigate('Bottle', { id: wine.bottleId })
+                                        }
+                                    >
+                                        <Image
+                                            source={{
+                                                uri:
+                                                    wine.imageUrl ||
+                                                    'https://via.placeholder.com/300x200?text=Wine+Bottle',
+                                            }}
+                                            style={styles.wineImage}
+                                            resizeMode="contain"
+                                        />
+                                        <Text style={styles.wineName}>{wine.bottleName}</Text>
+                                        <Text style={styles.wineExplanation}>
+                                            {wine.explanation}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))
+                            ) : (
+                                <Text style={styles.noResultText}>
+                                    No recommendations yet.
+                                </Text>
+                            )}</ScrollView>
                     </View>
-                </View>
+                )}
             </View>
         </KeyboardAvoidingView>
     );
