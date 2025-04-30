@@ -1,7 +1,6 @@
 // src/context/AuthContext.js
 
 import React, { createContext, useContext, useState } from 'react';
-
 // Create AuthContext
 const AuthContext = createContext();
 
@@ -13,6 +12,8 @@ export const AuthProvider = ({ children }) => {
         console.log('Logging in user:', userData);
         setUser(userData);
     };
+
+
 
     const logout = () => {
         console.log('Logging out user');
