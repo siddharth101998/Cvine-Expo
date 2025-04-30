@@ -18,11 +18,15 @@ const ChatScreen = () => {
     const [messages, setMessages] = useState([]); // history of messages
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const exampleQuestions = [
+        'What wine pairs well with steak?',
+        'Tell me about Pinot Noir.',
+        'Suggest a wine for a summer picnic.',
+    ];
+    const sendMessage = async (messageContent = input) => {
+        if (!messageContent.trim()) return;
 
-    const sendMessage = async () => {
-        if (!input.trim()) return;
-
-        const userMessage = { role: 'user', content: input };
+        const userMessage = { role: 'user', content: messageContent };
         const updatedMessages = [...messages, userMessage]; // 👈 include past messages
 
         setMessages(updatedMessages);
@@ -41,16 +45,37 @@ const ChatScreen = () => {
             setLoading(false);
         }
     };
+    const handleExamplePress = (question) => {
+        setInput(question);
+        sendMessage(question);
+    };
     return (
         <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={90}
         >
+            <View style={styles.header}>
+                <Text style={styles.headerText}>Wine AI</Text>
+            </View>
             <ScrollView
                 contentContainerStyle={styles.messagesContainer}
                 showsVerticalScrollIndicator={false}
             >
+                {messages.length === 0 && (
+                    <View style={styles.exampleContainer}>
+                        <Text style={styles.exampleTitle}>Try asking:</Text>
+                        {exampleQuestions.map((question, index) => (
+                            <TouchableOpacity
+                                key={index}
+                                style={styles.exampleButton}
+                                onPress={() => handleExamplePress(question)}
+                            >
+                                <Text style={styles.exampleButtonText}>{question}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                )}
                 {messages.map((msg, index) => (
                     <View
                         key={index}
@@ -74,10 +99,10 @@ const ChatScreen = () => {
                     placeholder="Type a message..."
                     value={input}
                     onChangeText={setInput}
-                    onSubmitEditing={sendMessage}
-                    returnKeyType="send"
+
+
                 />
-                <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+                <TouchableOpacity style={styles.sendButton} onPress={() => sendMessage(input)}>
                     <Text style={styles.sendButtonText}>Send</Text>
                 </TouchableOpacity>
             </View>
@@ -91,10 +116,38 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fcf8f5',
+    }, header: {
+        paddingTop: 50,
+        paddingBottom: 20,
+        backgroundColor: '#B22222',
+        alignItems: 'center',
+    },
+    headerText: {
+        color: '#fff',
+        fontSize: 24,
+        fontWeight: 'bold',
     },
     messagesContainer: {
         padding: 15,
         paddingBottom: 90, // to avoid keyboard overlap
+    },
+    exampleContainer: {
+        marginBottom: 20,
+    },
+    exampleTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 10,
+    },
+    exampleButton: {
+        backgroundColor: '#f0f0f0',
+        padding: 10,
+        borderRadius: 10,
+        marginBottom: 10,
+    },
+    exampleButtonText: {
+        fontSize: 16,
+        color: '#333',
     },
     messageBubble: {
         maxWidth: '80%',
