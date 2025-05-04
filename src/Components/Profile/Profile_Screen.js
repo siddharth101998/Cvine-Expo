@@ -9,7 +9,7 @@ import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-
+import { host } from '../../API-info/apiifno';
 const ProfileScreen = () => {
   const { user, updateUser } = useAuth();
   const [profileImageUri, setProfileImageUri] = useState(user.profileImage || null);
@@ -22,7 +22,7 @@ const ProfileScreen = () => {
   const fetchWishlist = async () => {
     if (!user) return;
     try {
-      const res = await axios.get(`http://localhost:5002/wishlist/${user._id}`);
+      const res = await axios.get(`${host}/wishlist/${user._id}`);
       console.log(res.data.bottles)
       setWishlistBottles(res.data.bottles);
     } catch (error) {
@@ -37,7 +37,7 @@ const ProfileScreen = () => {
   // const fetchSearchHistory = async () => {
   //   if (!user) return;
   //   try {
-  //     const res = await axios.get(`http://localhost:5002/searchHistory/${user._id}`);
+  //     const res = await axios.get(`${host}/searchHistory/${user._id}`);
   //     const payload = res.data;
   //     // Determine array of history entries
   //     const historyItems = Array.isArray(payload)
@@ -80,7 +80,7 @@ const ProfileScreen = () => {
   const fetchSearchHistory = async () => {
     if (!user) return;
     try {
-      const res = await axios.get(`http://localhost:5002/searchHistory/${user._id}`);
+      const res = await axios.get(`${host}/searchHistory/${user._id}`);
       console.log("searchhistory response:", res.data.length);
 
       setSearchHistory(res.data);

@@ -13,9 +13,9 @@ import axios from 'axios';
 import { useRoute } from '@react-navigation/native';
 import { useAuth } from '../authContext/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-const API_BASE_URL = "http://localhost:5002";
+//const API_BASE_URL = "http://localhost:5002";
 // const API_BASE_URL = 'https://a19b-2601-86-0-1580-e45b-5c-b3e1-ec58.ngrok-free.app';
-
+import { host } from '../API-info/apiifno';
 const BottlePage = () => {
     const route = useRoute();
     const { user } = useAuth();
@@ -34,18 +34,17 @@ const BottlePage = () => {
     useEffect(() => {
         const fetchBottle = async () => {
             try {
-                const response = await axios.get(`${API_BASE_URL}/bottle/${id}`);
-                console.log("bottle res", response.data.data);
+                const response = await axios.get(`${host}/bottle/${id}`);
+                console.log("bottle page", response.data)
                 setBottle(response.data.data);
                 if (user && response.data?.data?._id) {
                     try {
-                    
-                        await axios.post(`${API_BASE_URL}/searchHistory/`, {
+                        await axios.post(`${host}/searchHistory/`, {
                             userId: user._id,
                             bottle: response.data.data
                         });
 
-                        const wishlistRes = await axios.get(`${API_BASE_URL}/wishlist/${user._id}`);
+                        const wishlistRes = await axios.get(`${host}/wishlist/${user._id}`);
                         const wishlist = wishlistRes.data?.bottles || [];
                         const found = wishlist.find(item => item._id === response.data.data._id);
                         setIsWishlisted(!!found);
@@ -66,7 +65,7 @@ const BottlePage = () => {
     const toggleWishlist = async () => {
         if (!user) return;
         try {
-            await axios.post(`${API_BASE_URL}/wishlist/toggle`, {
+            await axios.post(`${host}/wishlist/toggle`, {
                 userId: user._id,
                 bottleId: bottle._id
             });

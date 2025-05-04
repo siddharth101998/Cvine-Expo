@@ -17,6 +17,7 @@ import ChatScreen from './src/Components/Chat';
 import SearchPage from './src/Components/SearchPage';
 import Navbar from './src/Components/NavbarTabs';
 import ProfileScreen from './src/Components/Profile/Profile_Screen';
+import RecommendationMain from './src/Components/Recommendation/Recommendation';
 
 const Stack = createNativeStackNavigator();
 
@@ -51,7 +52,7 @@ export default function App() {
             {() => <ScreenWithNavbar><HomeScreen /></ScreenWithNavbar>}
           </Stack.Screen>
           <Stack.Screen name="Recommendation" options={{ headerShown: false }}>
-            {() => <ScreenWithNavbar><Recommendation /></ScreenWithNavbar>}
+            {() => <ScreenWithNavbar><RecommendationMain /></ScreenWithNavbar>}
           </Stack.Screen>
           <Stack.Screen name="Recipes" options={{ headerShown: false }}>
             {() => <ScreenWithNavbar><RecipePage /></ScreenWithNavbar>}
@@ -70,6 +71,9 @@ export default function App() {
           </Stack.Screen>
           <Stack.Screen name="Profile" options={{ headerShown: false }}>
             {() => (<ScreenWithNavbar><ProfileScreen /></ScreenWithNavbar>)}
+          </Stack.Screen>
+          <Stack.Screen name="Scan" options={{ headerShown: false }}>
+            {() => (<ScreenWithNavbar><ScanScreen /></ScreenWithNavbar>)}
           </Stack.Screen>
         </Stack.Navigator>
       </NavigationContainer>

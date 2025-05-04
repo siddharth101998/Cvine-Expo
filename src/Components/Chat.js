@@ -11,8 +11,8 @@ import {
     Platform,
 } from 'react-native';
 import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:5002'; // Update for production
+import { host } from '../API-info/apiifno';
+//const API_BASE_URL = 'http://localhost:5002'; // Update for production
 
 const ChatScreen = () => {
     const [messages, setMessages] = useState([]); // history of messages
@@ -34,7 +34,7 @@ const ChatScreen = () => {
         setLoading(true);
 
         try {
-            const res = await axios.post(`${API_BASE_URL}/api/chat`, { messages: updatedMessages });
+            const res = await axios.post(`${host}/api/chat`, { messages: updatedMessages });
             const aiMessage = { role: 'assistant', content: res.data.reply };
             setMessages(prev => [...prev, aiMessage]);
         } catch (error) {

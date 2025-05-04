@@ -20,7 +20,7 @@ import axios from 'axios';
 import { useAuth } from '../authContext/AuthContext';
 import debounce from 'lodash.debounce';
 
-const API_BASE_URL = 'http://localhost:5002';
+import { host } from '../API-info/apiifno';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -52,7 +52,7 @@ export const RecipePage = () => {
   // Hoisted fetchRecipes so it can be called from useEffect
   async function fetchRecipes() {
     try {
-      const response = await axios.get(`${API_BASE_URL}/recipe/`);
+      const response = await axios.get(`${host}/recipe/`);
       // Sort so newest recipes appear first
       setRecipes(response.data.slice().reverse());
     } catch (error) {
@@ -65,7 +65,7 @@ export const RecipePage = () => {
   // Fetch available bottles on mount
   const fetchBottles = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/bottle/`);
+      const response = await axios.get(`${host}/bottle/`);
       setAvailableBottles(response.data);
     } catch (error) {
       console.error('Error fetching bottles:', error);
@@ -84,7 +84,7 @@ export const RecipePage = () => {
       return;
     }
     try {
-      const response = await axios.get(`${API_BASE_URL}/bottle/search`, {
+      const response = await axios.get(`${host}/bottle/search`, {
         params: { q: query },
       });
       setSearchResults(response.data.data);
@@ -119,7 +119,7 @@ export const RecipePage = () => {
         userName: user?.username,
         byUserId: user?._id,
       };
-      const response = await axios.post(`${API_BASE_URL}/recipe/`, payload);
+      const response = await axios.post(`${host}/recipe/`, payload);
       // Prepend the newly created recipe to show it at the top
       setRecipes((prev) => [response.data, ...prev]);
       setNewRecipe({ name: '', items: [], method: '', bottles: [] });
@@ -389,11 +389,11 @@ export const RecipePage = () => {
                 {selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0 ? (
                   selectedRecipe.ingredients.map((ing, i) => (
                     <View key={i} style={styles.ingredientRow}>
-                      <Ionicons 
-                        name="ellipse" 
-                        size={6} 
-                        color="#555" 
-                        style={{ marginRight: 8, marginTop: 10 }} 
+                      <Ionicons
+                        name="ellipse"
+                        size={6}
+                        color="#555"
+                        style={{ marginRight: 8, marginTop: 10 }}
                       />
                       <Text style={styles.sectionText}>
                         {ing.itemName}{ing.quantity ? `: ${ing.quantity}` : ''}
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
     paddingHorizontal: 10,
     paddingTop: 10,
-    top:65,
+    top: 65,
   },
   pageTitleContainer: {
     flexDirection: 'row',

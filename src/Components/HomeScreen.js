@@ -16,8 +16,8 @@ import debounce from 'lodash.debounce';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import logo from '../../assets/logo.png';
-const API_BASE_URL = "http://localhost:5002";
-// const API_BASE_URL = 'https://a19b-2601-86-0-1580-e45b-5c-b3e1-ec58.ngrok-free.app';
+
+import { host } from '../API-info/apiifno';
 import { useAuth } from '../authContext/AuthContext';
 const HomeScreen = () => {
     const [searchResults, setSearchResults] = useState([]);
@@ -46,7 +46,7 @@ const HomeScreen = () => {
 
     const fetchCountries = async () => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/region`);
+            const response = await axios.get(`${host}/region`);
             setCountries(response.data);
         } catch (error) {
             console.error("Error fetching countries:", error);
@@ -55,7 +55,7 @@ const HomeScreen = () => {
 
     const fetchWineTypes = async () => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/winetype`);
+            const response = await axios.get(`${host}/winetype`);
             setWineTypes(response.data);
         } catch (error) {
             console.error("Error fetching wine types:", error);
@@ -64,7 +64,7 @@ const HomeScreen = () => {
 
     const fetchGrapeTypes = async () => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/grapetype`);
+            const response = await axios.get(`${host}/grapetype`);
             setGrapeTypes(response.data);
         } catch (error) {
             console.error("Error fetching grape types:", error);
@@ -72,7 +72,8 @@ const HomeScreen = () => {
     };
     const fetchTrending = async () => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/bottle/trending`);
+            const response = await axios.get(`${host}/bottle/trending`);
+            console.log("resss", response.data)
             setTrending(response.data);
         } catch (error) {
             console.error("Error fetching trending items:", error);
@@ -88,7 +89,7 @@ const HomeScreen = () => {
         }
         setLoading(true);
         try {
-            const response = await axios.get(`${API_BASE_URL}/bottle/search`, {
+            const response = await axios.get(`${host}/bottle/search`, {
                 params: {
                     q: query,
                     country: selectedCountry,

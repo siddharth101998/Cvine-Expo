@@ -10,9 +10,9 @@
 import axios from 'axios';
 
 // 🔧 Replace this with your actual IP if you're calling a local backend
-const API_BASE_URL = "http://localhost:5002";
-// const API_BASE_URL = 'https://your-ngrok-url.ngrok-free.app';
 
+//const host = "http://localhost:5002"
+const host = "https://cvine.onrender.com"
 // 🔐 Register User
 export const registerUser = async (email, password, firstName) => {
     try {
@@ -28,7 +28,7 @@ export const registerUser = async (email, password, firstName) => {
         // console.log("firebase register finished");
 
         // 🌐 Call backend to save to MongoDB
-        const res = await axios.post(`${API_BASE_URL}/user/`, {
+        const res = await axios.post(`${host}/user/`, {
             email,
             password,
             firstName,
@@ -40,7 +40,7 @@ export const registerUser = async (email, password, firstName) => {
     }
 };
 
-// 🔓 Login User
+
 export const loginUser = async (email, password) => {
     try {
         // ↓↓ Skip Firebase sign-in
@@ -52,7 +52,7 @@ export const loginUser = async (email, password) => {
         // const user = userCredential.user;
 
         // Hit your backend for auth
-        const res = await axios.post(`${API_BASE_URL}/user/login`, {
+        const res = await axios.post(`${host}/user/login`, {
             email,
             password,
         });
@@ -69,7 +69,7 @@ export const logoutUser = async () => {
         // ↓↓ Skip Firebase sign-out
         // await signOut(auth);
         // If you need to notify backend, you could:
-        // await axios.post(`${API_BASE_URL}/user/logout`);
+        // await axios.post(`${host}/user/logout`);
     } catch (error) {
         throw error;
     }
