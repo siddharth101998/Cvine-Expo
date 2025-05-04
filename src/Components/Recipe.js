@@ -29,7 +29,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const RecipePage = () => {
+export const RecipePage = () => {
   const { user } = useAuth();
   const [recipes, setRecipes] = useState([]);
   const [expandedIds, setExpandedIds] = useState([]);

@@ -15,6 +15,7 @@ const ProfileScreen = () => {
   const [profileImageUri, setProfileImageUri] = useState(user.profileImage || null);
   const [wishlistBottles, setWishlistBottles] = useState([]);
   const [searchHistory, setSearchHistory] = useState([]);
+  const [recipeCount, setRecipeCount] = useState(0);
   const [activeTab, setActiveTab] = useState('wishlist');
   const navigation = useNavigation();
 
@@ -28,6 +29,9 @@ const ProfileScreen = () => {
       console.error("Error fetching wishlist bottles:", error);
     }
   };
+
+  
+
 
 
   // const fetchSearchHistory = async () => {
@@ -62,11 +66,23 @@ const ProfileScreen = () => {
   //     console.error("Error fetching search history:", error);
   //   }
   // };
+  const fetchRecipeCount = async () => {
+    if (!user) return;
+    try {
+      const res = await axios.get(`http://localhost:5002/recipe/count/${user._id}`);
+      console.log("recipe count response:", res.data.count);
+      setRecipeCount(res.data.count);
+    } catch (error) {
+      console.error("Error fetching count of recipes :", error);
+    }
+  };
+
   const fetchSearchHistory = async () => {
     if (!user) return;
     try {
       const res = await axios.get(`http://localhost:5002/searchHistory/${user._id}`);
       console.log("searchhistory response:", res.data.length);
+
       setSearchHistory(res.data);
     } catch (error) {
       console.error("Error fetching search bottles:", error);
@@ -100,6 +116,9 @@ const ProfileScreen = () => {
   };
 
   useEffect(() => {
+    // Fetch user data when the component mounts
+    //fetchUser();
+    fetchRecipeCount();
     fetchWishlist();
     fetchSearchHistory();
   }, [user]);
@@ -149,12 +168,14 @@ const ProfileScreen = () => {
         </TouchableOpacity>
         <Text style={styles.usernameWhite}>{user.username}</Text>
       </View>
-
-      {/* Stats Row Overlap */}
       <View style={styles.statsOverlay}>
         <View style={[styles.statBox, { backgroundColor: '#fff' }]}>
-          <Text style={[styles.statNumber, { color: 'black' }]}>{user.recipeCount}</Text>
-          <Text style={styles.statLabel}>Recipes</Text>
+          <Text style={[styles.statNumber, { color: 'black' }]}>{recipeCount}</Text>
+          <Text style={styles.statLabel}>
+          <TouchableOpacity onPress={() => navigation.navigate('UserRecipes', { userId: user._id })}>
+                        <Text style={{ color: 'black', fontSize: 16 }}>Recipes</Text>
+                    </TouchableOpacity>
+            </Text>
         </View>
         <View style={[styles.statBox, { backgroundColor: '#fff' }]}>
           <Text style={[styles.statNumber, { color: 'black' }]}>{badgeDetails.length}</Text>

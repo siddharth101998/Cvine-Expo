@@ -35,10 +35,11 @@ const BottlePage = () => {
         const fetchBottle = async () => {
             try {
                 const response = await axios.get(`${API_BASE_URL}/bottle/${id}`);
-                console.log("bottle page", response.data)
+                console.log("bottle res", response.data.data);
                 setBottle(response.data.data);
                 if (user && response.data?.data?._id) {
                     try {
+                    
                         await axios.post(`${API_BASE_URL}/searchHistory/`, {
                             userId: user._id,
                             bottle: response.data.data

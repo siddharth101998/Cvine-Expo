@@ -56,7 +56,7 @@ export const loginUser = async (email, password) => {
             email,
             password,
         });
-
+        console.log("login res", res.data);
         return res.data.user;
     } catch (error) {
         throw error;
