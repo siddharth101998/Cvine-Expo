@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { registerUser } from '../../authservice'; // Adjust path as needed
 import { useNavigation } from '@react-navigation/native';
-
+import { host } from '../API-info/apiifno';
 const RegisterScreen = () => {
     const [firstName, setFirstName] = useState('');
     const [email, setEmail] = useState('');

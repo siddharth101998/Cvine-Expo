@@ -1,17 +1,7 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { initializeAuth, getReactNativePersistence } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getStorage } from "firebase/storage";
-import Constants from 'expo-constants';
-
-const {
-    FIREBASE_API_KEY,
-    FIREBASE_AUTH_DOMAIN,
-    FIREBASE_PROJECT_ID,
-    FIREBASE_STORAGE_BUCKET,
-    FIREBASE_MESSAGING_SENDER_ID,
-    FIREBASE_APP_ID,
-    FIREBASE_MEASUREMENT_ID,
-} = Constants.expoConfig.extra;
 
 const firebaseConfig = {
     apiKey: "AIzaSyCktkNvbxBN62c6hqD6iVWJ3xnkViJJixo",
@@ -25,6 +15,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-export const auth = getAuth(app);
-export const storage = getStorage(app);
-export default app;
+// ✅ Properly initialize auth for React Native with AsyncStorage
+
+
+const storage = getStorage(app);
+
+export { app, storage };

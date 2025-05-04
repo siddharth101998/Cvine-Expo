@@ -15,8 +15,7 @@ import axios from 'axios';
 import debounce from 'lodash.debounce';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-const API_BASE_URL = "http://localhost:5002";
-// const API_BASE_URL = 'https://a19b-2601-86-0-1580-e45b-5c-b3e1-ec58.ngrok-free.app';
+import { host } from '../API-info/apiifno';
 import { useAuth } from '../authContext/AuthContext';
 const SearchPage = () => {
     const [searchResults, setSearchResults] = useState([]);
@@ -29,7 +28,7 @@ const SearchPage = () => {
         }
         setLoading(true);
         try {
-            const response = await axios.get(`${API_BASE_URL}/bottle/search`, {
+            const response = await axios.get(`${host}/bottle/search`, {
                 params: {
                     q: query,
                     // country: selectedCountry,

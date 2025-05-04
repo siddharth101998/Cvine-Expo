@@ -16,7 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../authContext/AuthContext';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-const API_BASE_URL = "http://localhost:5002";
+import { host } from '../API-info/apiifno';
 const LoginScreen = () => {
     const [isRegister, setIsRegister] = useState(false);
     const [email, setEmail] = useState('');
@@ -59,11 +59,11 @@ const LoginScreen = () => {
     const fetchUserRecommendations = async (userId) => {
         try {
             // Fetch search history
-            const searchRes = await axios.get(`${API_BASE_URL}/searchHistory/${userId}`);
+            const searchRes = await axios.get(`${host}/searchHistory/${userId}`);
             const searchHistory = searchRes.data || [];
 
             // Fetch wishlist
-            const wishlistRes = await axios.get(`${API_BASE_URL}/wishlist/${userId}`);
+            const wishlistRes = await axios.get(`${host}/wishlist/${userId}`);
             const wishlist = wishlistRes.data.bottles || [];
 
             // Extract last 3 searched bottle names
@@ -102,7 +102,7 @@ const LoginScreen = () => {
             }
 
             // Fetch recommendations
-            const recRes = await axios.post(`${API_BASE_URL}/api/recommend`, { selectedBottles });
+            const recRes = await axios.post(`${host}/api/recommend`, { selectedBottles });
             const recommendations = recRes.data.recommendations || [];
 
             // Store recommendations

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -13,17 +13,23 @@ import {
 import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from '../authContext/AuthContext';
+//import { useAuth } from '../authContext/AuthContext'
 import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
 import debounce from 'lodash.debounce';
 import { useNavigation } from '@react-navigation/native';
 import { KeyboardAvoidingView, Platform } from 'react-native';
-const API_BASE_URL = 'http://localhost:5002'; // Update for production
-
+import { host } from '../API-info/apiifno';
+const MemoizedTextInput = React.memo(({ value, onChangeText, ...props }) => (
+    <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        {...props}
+    />
+));
 const Recommendation = ({ }) => {
     const layout = Dimensions.get('window');
-    const { user } = useAuth();
-    const userId = user?._id;
+    //const { user } = useAuth();
+    //const userId = user?._id;
 
     const [index, setIndex] = useState(0);
     const [routes] = useState([
@@ -68,7 +74,7 @@ const Recommendation = ({ }) => {
         }
         setLoading(true);
         try {
-            const response = await axios.get(`${API_BASE_URL}/bottle/search`, {
+            const response = await axios.get(`${host}/bottle/search`, {
                 params: { q: query },
             });
             setSearchResults(response.data.data);
@@ -78,14 +84,14 @@ const Recommendation = ({ }) => {
         setLoading(false);
     };
 
-    const debouncedSearch = debounce((query) => {
+    const debouncedSearch = useMemo(() => debounce((query) => {
         fetchSearchResults(query);
-    }, 300);
+    }, 300), []);
 
-    const handleSearch = (text) => {
+    const handleSearch = useCallback((text) => {
         setSearchText(text);
         debouncedSearch(text);
-    };
+    }, []);
 
     const handleBottleSelect = (bottle) => {
         if (!selectedBottles.find((b) => b._id === bottle._id)) {
@@ -98,10 +104,25 @@ const Recommendation = ({ }) => {
             alert('Please select at least one bottle.');
             return;
         }
-        setLoading(true);
+        // const today = new Date().toISOString().split('T')[0]; // Format: 'YYYY-MM-DD'
+        // const usageKey = 'recommendationUsage';
+
         try {
+            // const usageData = await AsyncStorage.getItem(usageKey);
+            // let usage = usageData ? JSON.parse(usageData) : { date: today, count: 0 };
+
+            // if (usage.date !== today) {
+            //     // Reset count for a new day
+            //     usage = { date: today, count: 0 };
+            // }
+
+            // if (usage.count >= 3) {
+            //     alert('Your free daily recommendations are finished. Upgrade to premium to get more recommendations.');
+            //     return;
+            // }
+            setLoading(true);
             const bottleNames = selectedBottles.map((b) => b.name);
-            const response = await axios.post(`${API_BASE_URL}/api/recommend`, {
+            const response = await axios.post(`${host}/api/recommend`, {
                 selectedBottles: bottleNames,
             });
             setGetRecommendations(response.data.recommendations);
@@ -109,19 +130,47 @@ const Recommendation = ({ }) => {
                 'getwineRecommendations',
                 JSON.stringify(response.data.recommendations)
             );
+            usage.count += 1;
+            await AsyncStorage.setItem(usageKey, JSON.stringify(usage));
             setShowSearch(false);
+            setSelectedBottles([]);
+            setSearchText('');
+            setSearchResults([]);
             //setIndex(0); // Switch to Personalized tab to view recommendations
         } catch (error) {
             console.error('Error fetching recommendations:', error);
         }
         setLoading(false);
     };
-    const handleNewRecommendation = () => {
-        setShowSearch(true);
-        setSelectedBottles([]);
-        setSearchText('');
-        setSearchResults([]);
-        setGetRecommendations([]);
+    const handleNewRecommendation = async () => {
+
+        try {
+            const today = new Date().toISOString().split('T')[0]; // Format: 'YYYY-MM-DD'
+            const usageKey = 'recommendationUsage';
+            const usageData = await AsyncStorage.getItem(usageKey);
+            let usage = usageData ? JSON.parse(usageData) : { date: today, count: 0 };
+            if (usage.date !== today) {
+                // Reset count for a new day
+                usage = { date: today, count: 0 };
+            }
+
+            if (usage.count >= 4) {
+                alert('Your free daily recommendations are finished. Upgrade to premium to get more recommendations.');
+                return;
+            }
+            else {
+                setShowSearch(true);
+                setSelectedBottles([]);
+                setSearchText('');
+                setSearchResults([]);
+                setGetRecommendations([]);
+            }
+
+
+        } catch (error) {
+            console.log("error in async storage usage checking", error)
+        }
+
     };
     const handleshowRecommendations = () => {
         setShowSearch(false);
@@ -179,7 +228,7 @@ const Recommendation = ({ }) => {
                                     color="gray"
                                     style={{ marginRight: 8 }}
                                 />
-                                <TextInput
+                                <MemoizedTextInput
                                     placeholder="Search for a wine..."
                                     value={searchText}
                                     onChangeText={handleSearch}
@@ -190,7 +239,7 @@ const Recommendation = ({ }) => {
                                 style={styles.addButton}
                                 onPress={handleshowRecommendations}
                             >
-                                <Text style={styles.addButtonText}>Get New Recommendations</Text>
+                                <Text style={styles.addButtonText}>Search Recommendations</Text>
                             </TouchableOpacity>
                         </View>
 
@@ -230,14 +279,19 @@ const Recommendation = ({ }) => {
                     </>
                 ) : (
                     <View style={styles.inner}>
-                        <TouchableOpacity
+                        {loading && (
+                            <ActivityIndicator size="large" color="#0000ff" style={{ marginTop: 20 }} />
+                        )}
+                        {!loading && (<TouchableOpacity
                             style={styles.addButton}
                             onPress={handleNewRecommendation}
                         >
                             <Text style={styles.addButtonText}>Get New Recommendations</Text>
-                        </TouchableOpacity>
+                        </TouchableOpacity>)}
+
+
                         <ScrollView style={styles.inner}>
-                            {getrecommendations.length > 0 ? (
+                            {
                                 getrecommendations.map((wine, index) => (
                                     <TouchableOpacity
                                         key={index}
@@ -261,11 +315,7 @@ const Recommendation = ({ }) => {
                                         </Text>
                                     </TouchableOpacity>
                                 ))
-                            ) : (
-                                <Text style={styles.noResultText}>
-                                    No recommendations yet.
-                                </Text>
-                            )}</ScrollView>
+                            }</ScrollView>
                     </View>
                 )}
             </View>
@@ -282,6 +332,7 @@ const Recommendation = ({ }) => {
                 return null;
         }
     };
+
 
     return (
         <View style={styles.container}>

@@ -2,7 +2,8 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
+import { host } from '../API-info/apiifno';
+import { handleScan } from './Scan';
 const Navbar = () => {
     const navigation = useNavigation();
     const route = useRoute();
@@ -17,6 +18,7 @@ const Navbar = () => {
 
     const handleTabPress = (tab) => {
         if (tab.name === 'Scan') {
+            handleScan(navigation);
             // custom scan handler logic (optional: call your handleScan function)
             console.log('Scan button pressed');
         } else if (tab.route) {
