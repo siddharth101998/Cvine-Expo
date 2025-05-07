@@ -18,7 +18,8 @@ const LoginScreen = () => {
     const [isRegister, setIsRegister] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [firstName, setFirstName] = useState('');
+    const [username, setUsername] = useState('');
+    const [fullName, setFullName] = useState('');
     const { login } = useAuth();
     const navigation = useNavigation();
 
@@ -29,12 +30,13 @@ const LoginScreen = () => {
                 return;
             }
             if (isRegister) {
-                await registerUser(email, password, firstName);
+                await registerUser(email, password, username, fullName);
                 Alert.alert("Registered successfully!");
-                setFirstName("");
-                setEmail("");
-                setPassword("")
-                setIsRegister(false)
+                setUsername('');
+                setFullName('');
+                setEmail('');
+                setPassword('');
+                setIsRegister(false);
             } else {
                 console.log("started")
                 const res = await loginUser(email, password);
@@ -47,9 +49,10 @@ const LoginScreen = () => {
         }
     };
     const handlelogin = () => {
-        setFirstName("");
-        setEmail("");
-        setPassword("")
+        setUsername('');
+        setFullName('');
+        setEmail('');
+        setPassword('');
         setIsRegister(!isRegister)
     }
 
@@ -65,12 +68,21 @@ const LoginScreen = () => {
             </Text>
 
             {isRegister && (
+                <>
                 <TextInput
-                    placeholder="First Name"
+                    placeholder="Username"
                     style={styles.input}
-                    value={firstName}
-                    onChangeText={setFirstName}
+                    value={username}
+                    onChangeText={setUsername}
+                    autoCapitalize="none"
                 />
+                <TextInput
+                    placeholder="Full Name"
+                    style={styles.input}
+                    value={fullName}
+                    onChangeText={setFullName}
+                />
+                </>
             )}
 
             <TextInput

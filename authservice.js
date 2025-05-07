@@ -14,9 +14,9 @@ const API_BASE_URL = "http://localhost:5002";
 // const API_BASE_URL = 'https://your-ngrok-url.ngrok-free.app';
 
 // 🔐 Register User
-export const registerUser = async (email, password, firstName) => {
+export const registerUser = async (email, password, username, fullName) => {
     try {
-        console.log("register started", password);
+        console.log("register started", { email, username, fullName });
 
         // ↓↓ Skip Firebase user creation
         // const userCredential = await createUserWithEmailAndPassword(
@@ -31,7 +31,8 @@ export const registerUser = async (email, password, firstName) => {
         const res = await axios.post(`${API_BASE_URL}/user/`, {
             email,
             password,
-            firstName,
+            username,
+            fullName,
         });
 
         return res.data.data;
