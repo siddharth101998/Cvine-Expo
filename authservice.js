@@ -12,7 +12,7 @@ import axios from 'axios';
 // 🔧 Replace this with your actual IP if you're calling a local backend
 
 const host = "http://localhost:5002"
-//rconst host = "https://cvine.onrender.com"
+//const host = "https://cvine.onrender.com"
 // 🔐 Register User
 export const registerUser = async (email, password, firstName) => {
     try {
@@ -46,7 +46,8 @@ export const loginUser = async (email, password) => {
      
         console.log(`${host}/user/login`,email);
 
-        console.log(`${host}/user/login`,password);
+    
+
         const res = await axios.post(`${host}/user/login`, {
             email,
             password,

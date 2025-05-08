@@ -37,10 +37,87 @@ const HomeScreen = () => {
         navigation.navigate('Scan');
     };
     useEffect(() => {
-        
+        // fetchCountries();
+        // fetchWineTypes();
+        // fetchGrapeTypes();
         fetchTrending();
+        if (user) { fetchUserRecommendations() }
+
         console.log("user details", user)
     }, []);
+    const fetchUserRecommendations = async (userId) => {
+        try {
+            const searchRes = await axios.get(`${host}/searchHistory/${userId}`);
+            const searchHistory = searchRes.data || [];
+
+            const wishlistRes = await axios.get(`${host}/wishlist/${userId}`);
+            const wishlist = wishlistRes.data.bottles || [];
+
+            const recentSearches = searchHistory
+                .slice(-3)
+                .map(entry => entry.bottle?.name)
+                .filter(Boolean);
+
+            const shuffledWishlist = wishlist.sort(() => 0.5 - Math.random());
+            const wishlistSelections = shuffledWishlist
+                .map(bottle => bottle.name)
+                .filter(Boolean)
+                .slice(0, 7);
+
+            let selectedBottles = [...recentSearches, ...wishlistSelections];
+            const SAMPLE_BOTTLES = [
+                "Château Lafite Rothschild 2015",
+                "Opus One 2016",
+                "Dominus Estate 2014",
+                "Screaming Eagle Cabernet Sauvignon 2012",
+                "Caymus Special Selection 2015",
+                "Silver Oak Cabernet Sauvignon 2017",
+                "Cakebread Cellars Chardonnay 2018",
+                "Rombauer Chardonnay 2019",
+                "Domaine Leflaive Puligny-Montrachet 2017",
+                "Kistler Vineyards Chardonnay 2018",
+                "Cakebread Cellars Sauvignon Blanc 2020",
+                "Cloudy Bay Sauvignon Blanc 2020"
+            ];
+            const needed = 10 - selectedBottles.length;
+            if (needed > 0) {
+                const fallback = SAMPLE_BOTTLES.filter(name => !selectedBottles.includes(name));
+                selectedBottles = [...selectedBottles, ...fallback.slice(0, needed)];
+            }
+
+            const recRes = await axios.post(`${host}/api/recommend`, { selectedBottles });
+            const recommendations = recRes.data.recommendations || [];
+            await AsyncStorage.setItem('wineRecommendations', JSON.stringify(recommendations));
+        } catch (error) {
+            console.error('Error fetching personalized recommendations:', error);
+        }
+    };
+    const fetchGuestRecommendations = async (userId) => {
+        try {
+
+            let selectedBottles = [...recentSearches, ...wishlistSelections];
+            const SAMPLE_BOTTLES = [
+                "Château Lafite Rothschild 2015",
+                "Opus One 2016",
+                "Dominus Estate 2014",
+                "Screaming Eagle Cabernet Sauvignon 2012",
+                "Caymus Special Selection 2015",
+                "Silver Oak Cabernet Sauvignon 2017",
+                "Cakebread Cellars Chardonnay 2018",
+                "Rombauer Chardonnay 2019",
+                "Domaine Leflaive Puligny-Montrachet 2017",
+                "Kistler Vineyards Chardonnay 2018",
+                "Cakebread Cellars Sauvignon Blanc 2020",
+                "Cloudy Bay Sauvignon Blanc 2020"
+            ];
+
+            const recRes = await axios.post(`${host}/api/recommend`, { selectedBottles });
+            const recommendations = recRes.data.recommendations || [];
+            await AsyncStorage.setItem('wineRecommendations', JSON.stringify(recommendations));
+        } catch (error) {
+            console.error('Error fetching personalized recommendations:', error);
+        }
+    };
 
   
     const fetchTrending = async () => {
@@ -128,7 +205,7 @@ const HomeScreen = () => {
             {/* <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
                 <Ionicons name="filter" size={18} />
                 <Text style={styles.filterText}>Toggle Filters</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             {showFilters && (
                 <View style={styles.filterContainer}>
@@ -174,7 +251,7 @@ const HomeScreen = () => {
                         ))}
                     </ScrollView>
                 </View>
-            )} */}
+            )} 
 
             {/* Trending Section */}
             <Text style={[styles.filterLabel, { marginTop: 20 }]}>Trending Wines</Text>

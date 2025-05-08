@@ -1,27 +1,36 @@
-import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import React, { useState } from 'react';
+import { View, TouchableOpacity, StyleSheet, Text, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { host } from '../API-info/apiifno';
 import { handleScan } from './Scan';
+import { useAuth } from '../authContext/AuthContext';
+import LoginPrompt from './LoginPrompt';
 const Navbar = () => {
     const navigation = useNavigation();
     const route = useRoute();
-
+    const { user } = useAuth();
     const tabs = [
         { name: 'Home', icon: 'home-outline', route: 'Home' },
         { name: 'Recommendation', icon: 'flame-outline', route: 'Recommendation' },
-        { name: 'Scan', icon: 'camera', route: null }, // placeholder for scan button
+        { name: 'Scan', icon: 'camera', route: null },
         { name: 'Recipes', icon: 'book-outline', route: 'Recipes' },
         { name: 'Chat', icon: 'chatbubble-outline', route: 'Chat' },
     ];
+    const [showLoginModal, setShowLoginModal] = useState(false);
 
     const handleTabPress = (tab) => {
         if (tab.name === 'Scan') {
             handleScan(navigation);
-            // custom scan handler logic (optional: call your handleScan function)
-            console.log('Scan button pressed');
-        } else if (tab.route) {
+            return;
+        }
+
+        if (['Recommendation', 'Recipes', 'Chat'].includes(tab.name) && !user) {
+            setShowLoginModal(true);
+            return;
+        }
+
+        if (tab.route) {
             navigation.navigate(tab.route);
         }
     };
@@ -65,6 +74,7 @@ const Navbar = () => {
                 </TouchableOpacity>
 
             </View>
+            <LoginPrompt visible={showLoginModal} onClose={() => setShowLoginModal(false)} />
         </View>
     );
 };
