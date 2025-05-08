@@ -26,7 +26,7 @@ const HomeScreen = () => {
     const [countries, setCountries] = useState([]);
     const [wineTypes, setWineTypes] = useState([]);
     const [grapeTypes, setGrapeTypes] = useState([]);
-    const [trending, setTrending] = useState([]);
+    const [trending, setTrending] = useState({ data: [] });
     const [selectedCountry, setSelectedCountry] = useState('');
     const [selectedWineType, setSelectedWineType] = useState('');
     const [selectedGrapeType, setSelectedGrapeType] = useState('');
@@ -394,6 +394,7 @@ const styles = StyleSheet.create({
 
     },
     trendingImageBox: {
+        width: '100%',
         height: 150,
         borderRadius: 10,
         overflow: 'hidden',
@@ -402,7 +403,6 @@ const styles = StyleSheet.create({
     trendingImage: {
         width: '100%',
         height: '100%',
-        objectFit: 'contain'
     },
     trendingName: {
         fontSize: 14,

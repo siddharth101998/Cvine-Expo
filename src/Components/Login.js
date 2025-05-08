@@ -22,8 +22,7 @@ const LoginScreen = () => {
     const [isRegister, setIsRegister] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [username, setUsername] = useState('');
-    const [fullName, setFullName] = useState('');
+    const [firstName, setFirstName] = useState('');
     const { login } = useAuth();
     const navigation = useNavigation();
     const [islogin, setIslogin] = useState(false);
@@ -35,12 +34,11 @@ const LoginScreen = () => {
                 return;
             }
             if (isRegister) {
-                await registerUser(email, password, username, fullName);
-                // Alert.alert("Registered successfully!");
-                setUsername('');
-                setFullName('');
-                setEmail('');
-                setPassword('');
+                await registerUser(email, password, firstName);
+                Alert.alert("Registered successfully!");
+                setFirstName("");
+                setEmail("");
+                setPassword("");
                 setIsRegister(false);
             } else {
                 const res = await loginUser(email, password);
@@ -58,11 +56,16 @@ const LoginScreen = () => {
     };
 
     const handlelogin = () => {
-        setUsername('');
-        setFullName('');
-        setEmail('');
-        setPassword('');
-        setIsRegister(!isRegister)
+        setFirstName("");
+        setEmail("");
+        setPassword("");
+        setIsRegister(!isRegister);
+        setIslogin(!islogin);
+    };
+    const handleregister = () => {
+        setEmail("");
+        setPassword("");
+        setIsRegister(!isRegister);
     }
 
     const fetchUserRecommendations = async (userId) => {
@@ -121,21 +124,19 @@ const LoginScreen = () => {
         >
             <Image source={logo} style={styles.logo} />
 
-            {isRegister && (
+            {!isRegister && !islogin && (
                 <>
-                <TextInput
-                    placeholder="Username"
-                    style={styles.input}
-                    value={username}
-                    onChangeText={setUsername}
-                    autoCapitalize="none"
-                />
-                <TextInput
-                    placeholder="Full Name"
-                    style={styles.input}
-                    value={fullName}
-                    onChangeText={setFullName}
-                />
+                    <View style={styles.buttonRow}>
+                        <TouchableOpacity style={styles.skipButton} onPress={guestlogin}>
+                            <Text style={styles.skipButtonText}>Skip Login</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.button} onPress={() => setIslogin(true)}>
+                            <Text style={styles.buttonText}>Login</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <TouchableOpacity onPress={() => { handleregister() }}>
+                        <Text style={styles.switchText}>Don't have an account? Register</Text>
+                    </TouchableOpacity>
                 </>
             )}
 

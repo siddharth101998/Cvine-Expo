@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -14,6 +15,7 @@ import {
   Dimensions,
   Modal,
   TextInput,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
@@ -27,10 +29,47 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+
+// Reusable recipe card with improved layout and tap targets
+const RecipeCard = ({ item, onLike, onSave, onShare, onPress, userId }) => (
+  <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={() => onPress(item)}>
+    <View style={styles.cardImageContainer}>
+      <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+    </View>
+    <View style={styles.cardContent}>
+      <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
+      <Text style={styles.previewText} numberOfLines={2}>
+        {item.method || item.ingredients?.map(i => i.itemName).join(', ')}...
+      </Text>
+      <View style={styles.actionsRow}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => onLike(item._id)}>
+          <Ionicons
+            name={item.likedusers.includes(userId) ? 'heart' : 'heart-outline'}
+            size={20}
+            color={item.likedusers.includes(userId) ? '#e74c3c' : '#777'}
+          />
+          <Text style={styles.actionText}>{item.likes}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={() => onSave(item._id)}>
+          <Ionicons
+            name={item.savedusers?.includes(userId) ? 'bookmark' : 'bookmark-outline'}
+            size={20}
+            color={item.savedusers?.includes(userId) ? '#2E8B57' : '#777'}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={() => onShare(item)}>
+          <Ionicons name="share-outline" size={20} color="#777" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  </TouchableOpacity>
+);
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const RecipePage = () => {
   const { user } = useAuth();
+  const navigation = useNavigation();
   const [recipes, setRecipes] = useState([]);
   const [expandedIds, setExpandedIds] = useState([]);
 
@@ -155,14 +194,25 @@ const RecipePage = () => {
   };
 
   const handleLike = async (id) => {
+    // Optimistically update local state
+    setRecipes(prev =>
+      prev.map(r => {
+        if (r._id === id) {
+          const liked = r.likedusers.includes(user._id);
+          const updatedLikedUsers = liked
+            ? r.likedusers.filter(u => u !== user._id)
+            : [...r.likedusers, user._id];
+          const updatedLikes = liked ? r.likes - 1 : r.likes + 1;
+          return { ...r, likedusers: updatedLikedUsers, likes: updatedLikes };
+        }
+        return r;
+      })
+    );
+    // Persist change to server
     try {
-      await axios.put(`http://localhost:5002/recipe/like`, {
-        recipeId: id,
-        userId: user._id,
-      });
-      fetchRecipes();
+      await axios.put(`${host}/recipe/like`, { recipeId: id, userId: user._id });
     } catch (error) {
-      console.error(error);
+      console.error('Error liking recipe:', error);
     }
   };
 
@@ -178,9 +228,26 @@ const RecipePage = () => {
     }
   };
 
-  const handleSave = (id) => {
-    // TODO: implement save/bookmark logic
-    console.log('Saved recipe', id);
+  const handleSave = async (id) => {
+    // Optimistically update local state
+    setRecipes(prev =>
+      prev.map(r => {
+        if (r._id === id) {
+          const saved = r.savedusers?.includes(user._id);
+          const updatedSavedUsers = saved
+            ? r.savedusers.filter(u => u !== user._id)
+            : [...(r.savedusers || []), user._id];
+          return { ...r, savedusers: updatedSavedUsers };
+        }
+        return r;
+      })
+    );
+    // Persist change to server
+    try {
+      await axios.put(`${host}/recipe/save`, { recipeId: id, userId: user._id });
+    } catch (error) {
+      console.error('Error saving recipe:', error);
+    }
   };
 
   const handleShare = (item) => {
@@ -191,56 +258,6 @@ const RecipePage = () => {
     });
   };
 
-  const renderRecipe = ({ item }) => {
-    return (
-      <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={() => openModal(item)}>
-        {/* Header */}
-        <View style={styles.headerRow}>
-          <Text style={styles.title} numberOfLines={1}>
-            {item.name}
-          </Text>
-          {item.expertRecommendation && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>Recommended</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Byline */}
-        <Text style={styles.byline}>By {item.userName}</Text>
-
-        {/* Action buttons */}
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleLike(item._id)}>
-            <Ionicons
-              name={item.likedusers.includes(user._id) ? 'heart' : 'heart-outline'}
-              size={24}
-              color={item.likedusers.includes(user._id) ? '#e74c3c' : '#555'}
-            />
-            <Text style={styles.actionText}>{item.likes}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleSave(item._id)}>
-            <Ionicons
-              name={item.savedusers?.includes(user._id) ? 'bookmark' : 'bookmark-outline'}
-              size={24}
-              color={item.savedusers?.includes(user._id) ? '#2E8B57' : '#555'}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleShare(item)}>
-            <Ionicons name="share-outline" size={24} color="#555" />
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    );
-  };
 
   return (
     <View style={styles.container}>
@@ -261,14 +278,14 @@ const RecipePage = () => {
         onRequestClose={() => setShowAddRecipe(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, styles.customModalContent]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Create Recipe</Text>
               <TouchableOpacity onPress={() => setShowAddRecipe(false)}>
                 <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
-            <ScrollView>
+            <ScrollView contentContainerStyle={styles.addRecipeForm}>
               <TextInput
                 style={styles.input}
                 placeholder="Recipe Name"
@@ -330,13 +347,17 @@ const RecipePage = () => {
               <Text style={styles.subHeader}>Selected Bottles:</Text>
               <View style={styles.selectedBottleContainer}>
                 {newRecipe.bottles.map((b, i) => (
-                  <View key={i} style={styles.selectedBottle}>
+                  <TouchableOpacity
+                    key={i}
+                    style={styles.selectedBottle}
+                    onPress={() => navigation.navigate('BottleDetail', { id: b.id })}
+                  >
                     <Image source={{ uri: b.image }} style={styles.selectedBottleImage} />
                     <Text style={styles.selectedBottleName}>{b.name}</Text>
                     <TouchableOpacity onPress={() => handleRemoveBottle(b.id)}>
                       <Ionicons name="close-circle" size={18} color="#B22222" />
                     </TouchableOpacity>
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </View>
               <TextInput
@@ -357,11 +378,50 @@ const RecipePage = () => {
         key={'numCols-2'}
         data={recipes}
         keyExtractor={(item) => item._id}
-        renderItem={renderRecipe}
+        renderItem={({ item }) => (
+          <RecipeCard
+            item={item}
+            onLike={handleLike}
+            onSave={handleSave}
+            onShare={handleShare}
+            onPress={openModal}
+            userId={user._id}
+          />
+        )}
         contentContainerStyle={styles.listContent}
         numColumns={2}
-        columnWrapperStyle={styles.row}
+        columnWrapperStyle={styles.gridRow}
       />
+      {selectedRecipe && (
+        <View style={styles.inlineDetailContainer}>
+          <Text style={styles.inlineTitle}>{selectedRecipe.name}</Text>
+          <Text style={styles.inlineSectionHeading}>Ingredients</Text>
+          {selectedRecipe.ingredients?.length > 0 ? (
+            selectedRecipe.ingredients.map((ing, i) => (
+              <Text key={i} style={styles.inlineListItem}>
+                • {ing.itemName}{ing.quantity ? `: ${ing.quantity}` : ''}
+              </Text>
+            ))
+          ) : (
+            <Text style={styles.inlineEmpty}>No ingredients provided.</Text>
+          )}
+          <Text style={styles.inlineSectionHeading}>Method</Text>
+          <Text style={styles.inlineText}>{selectedRecipe.method}</Text>
+          {selectedRecipe.bottles?.length > 0 && (
+            <>
+              <Text style={styles.inlineSectionHeading}>Bottles</Text>
+              <ScrollView horizontal style={styles.inlineBottleScroll} showsHorizontalScrollIndicator={false}>
+                {selectedRecipe.bottles.map((b, idx) => (
+                  <View key={idx} style={styles.inlineBottleItem}>
+                    <Image source={{ uri: b.image }} style={styles.inlineBottleImage} />
+                    <Text style={styles.inlineListItem} numberOfLines={1}>{b.name}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </>
+          )}
+        </View>
+      )}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -369,9 +429,12 @@ const RecipePage = () => {
         onRequestClose={closeModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, styles.customModalContent]}>
             {selectedRecipe && (
               <ScrollView>
+                {selectedRecipe.imageUrl && (
+                  <Image source={{ uri: selectedRecipe.imageUrl }} style={styles.modalImage} />
+                )}
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>{selectedRecipe.name}</Text>
                   <TouchableOpacity onPress={closeModal}>
@@ -442,6 +505,23 @@ const RecipePage = () => {
 export default RecipePage;
 
 const styles = StyleSheet.create({
+  gridRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  cardImageContainer: {
+    width: '100%',
+    height: 120,
+    backgroundColor: '#eee',
+  },
+  cardContent: {
+    padding: 12,
+  },
+  previewText: {
+    fontSize: 13,
+    color: '#555',
+    marginVertical: 6,
+  },
   container: {
     flex: 1,
     backgroundColor: '#fafafa',
@@ -474,14 +554,24 @@ const styles = StyleSheet.create({
     flexWrap: 'nowrap',
   },
   card: {
-    width: SCREEN_WIDTH / 2 - 12,
-    height: 150,
+    width: '100%',
+    aspectRatio: 1.2,
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     margin: 6,
-    elevation: 3,
     justifyContent: 'space-between',
+    overflow: 'hidden',
+  },
+  cardImage: {
+    width: '100%',
+    height: 120,
+    resizeMode: 'cover',
   },
   headerRow: {
     flexDirection: 'row',
@@ -615,6 +705,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
+    overflow: 'hidden',
   },
   modalTitle: {
     fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
@@ -789,5 +880,72 @@ const styles = StyleSheet.create({
   ingredientRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+  },
+  inlineDetailContainer: {
+    backgroundColor: '#fff',
+    margin: 10,
+    borderRadius: 12,
+    padding: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  inlineTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
+    color: '#333',
+  },
+  inlineSectionHeading: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 4,
+    color: '#2E8B57',
+  },
+  inlineListItem: {
+    fontSize: 14,
+    marginLeft: 8,
+    marginBottom: 2,
+    color: '#555',
+  },
+  inlineText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#555',
+  },
+  inlineEmpty: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: '#999',
+    marginLeft: 8,
+  },
+  inlineBottleScroll: {
+    marginTop: 8,
+  },
+  inlineBottleItem: {
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  inlineBottleImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  customModalContent: {
+    borderRadius: 20,
+    padding: 20,
+    backgroundColor: '#fdfdfd',
+  },
+  modalImage: {
+    width: '100%',
+    height: 200,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    resizeMode: 'cover',
+    marginBottom: 12,
   },
 });
