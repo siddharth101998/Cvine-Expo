@@ -17,11 +17,14 @@ Dimensions,
 Modal,
 TextInput,
 } from 'react-native';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { storage } from '../../firebase';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useAuth } from '../authContext/AuthContext';
 import debounce from 'lodash.debounce';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 
 import { host } from '../API-info/apiifno';
 
@@ -44,10 +47,12 @@ const [newRecipe, setNewRecipe] = useState({
   items: [],
   method: '',
   bottles: [], // array of { id, name, image }
+  imageUrl: '',
 });
 const [currentItem, setCurrentItem] = useState({ itemName: '', quantity: '' });
 const [availableBottles, setAvailableBottles] = useState([]);
 const [bottleSearchText, setBottleSearchText] = useState('');
+const [profileImageUri, setProfileImageUri] = useState(null);
 const [searchResults, setSearchResults] = useState([]);
 const [comments, setComments] = useState([]);
 const [newComment, setNewComment] = useState(''); // Add state for newComment
@@ -97,12 +102,12 @@ useEffect(() => {
 const fetchComments = async (recipeId) => {
   setLoadingComments(true);
   setError(null);
+  console.log('Fetching comments for recipeId:', recipeId);
   try {
-    const response = await fetch(`${host}/comment/${recipeId}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch comments');
-    }
-    const data = await response.json();
+    const response = await axios.get(`${host}/recipe/comment/${recipeId}`);
+    
+    const data = response.data;
+    console.log('Fetched comments:', data);
     setComments(data.reverse()); // Optional: newest first
   } catch (err) {
     console.error(err);
@@ -117,28 +122,15 @@ const postComment = async () => {
   if (!commentText.trim()) return; // Prevent empty comments
 
   try {
-    const response = await fetch(`${host}/comments`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Add Authorization if needed
-        // Authorization: `Bearer ${user.token}`,
-      },
-      body: JSON.stringify({
+    const response = await axios.post(`${host}/recipe/comment`, {
         recipeId: selectedRecipe._id,
         userId: user._id,
         userName: user.name,
         comment: commentText.trim(),
-      }),
     });
-
-    if (!response.ok) {
-      throw new Error('Failed to post comment');
-    }
-
-    const newComment = await response.json();
-    setComments((prevComments) => [newComment, ...prevComments]); // Add new comment on top
-    setCommentText('');
+    console.log('Comment posted:', response.data);
+    //setComments((prevComments) => [newComment, ...prevComments]); // Add new comment on top
+    //setCommentText('');
   } catch (err) {
     console.error(err);
     alert('Error posting comment: ' + err.message);
@@ -188,15 +180,23 @@ const handleSubmitRecipe = async () => {
       method: newRecipe.method,
       userName: user?.username,
       byUserId: user?._id,
+      imageUrl: newRecipe.imageUrl, // Use the downloaded URL for backend submission
     };
+    console.log('Submitting recipe:', payload);
     const response = await axios.post(`${host}/recipe/`, payload);
-    // Prepend the newly created recipe to show it at the top
     setRecipes((prev) => [response.data, ...prev]);
-    setNewRecipe({ name: '', items: [], method: '', bottles: [] });
+    setNewRecipe({ name: '', items: [], method: '', bottles: [], imageUrl: '' });
+    setProfileImageUri(null); // Reset the local preview
     setShowAddRecipe(false);
+
   } catch (error) {
     console.error('Error creating recipe:', error);
   }
+  finally {
+  setNewRecipe({ name: '', items: [], method: '', bottles: [], imageUrl: '' });
+  setProfileImageUri(null); // Reset the local preview
+  }
+  
 };
 
 const handleRemoveBottle = (id) => {
@@ -248,18 +248,16 @@ const handleAddComment = async () => {
   if (!newComment.trim()) return;
 
   try {
-    const response = await fetch(`${host}/comments`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    console.log('Adding comment:', user);
+    const response = await axios.post(`${host}/recipe/comment`, {
         recipeId: selectedRecipe._id,
         userId: user._id,
-        userName: user.name,
-        text: newComment.trim(), // <-- match the key used in your DB
-      }),
-    });
+        userName: user.username,
+        comment: newComment.trim(), // <-- match the key used in your DB
+      });
+    console.log('Comment added:', response.data);
 
-    const savedComment = await response.json();
+    const savedComment = response.data;
     setComments(prev => [savedComment, ...prev]);
     setNewComment('');
   } catch (error) {
@@ -269,9 +267,7 @@ const handleAddComment = async () => {
 
 const handleDeleteComment = async (commentId) => {
   try {
-    await fetch(`${host}/comments/${commentId}`, {
-      method: 'DELETE',
-    });
+    await axios.delete(`${host}/recipe/comment/${commentId}`);
     setComments(prev => prev.filter(comment => comment._id !== commentId));
   } catch (error) {
     console.error('Error deleting comment:', error);
@@ -300,8 +296,88 @@ const handleShare = (item) => {
       .join(', ')}\nMethod: ${item.method}`,
   });
 };
+const pickImage = async () => {
+  // Request permission
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (status !== 'granted') {
+    alert('Permission to access the gallery is required!');
+    return;
+  }
+
+  // Open image picker
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    allowsEditing: true,
+    aspect: [1, 1],
+    quality: 0.7,
+  });
+
+  // Check if the user canceled
+  const didCancel = result.cancelled ?? result.canceled;
+  if (!didCancel) {
+    // Get the local URI
+    const uri = result.uri ?? result.assets?.[0]?.uri;
+   
+    // Set the local URI for preview
+    setProfileImageUri(uri);
+
+    // Upload the image and get the download URL
+    // Note: You might want to handle the case where uri is undefined
+    if (!uri) {
+      console.error('Image URI is undefined');
+      return;
+    }
+    console.log('Uploading image:', uri);
+    const downloadUrl = await uploadAndProcessImage(uri);
+    console.log("Download URL:", downloadUrl);
+
+    // Save the download URL for backend submission
+    setNewRecipe((prev) => ({
+      ...prev,
+      imageUrl: downloadUrl,
+    }));
+  }
+};
+
+const uploadAndProcessImage = async (uri) => {
+  try {
+    if (!uri) throw new Error('Image URI is undefined');
+    console.log('Uploading image:', uri);
+    // Convert the URI to a Blob
+    const blob = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = () => resolve(xhr.response);
+      xhr.onerror = () => reject(new Error('Failed to convert URI to Blob'));
+      xhr.responseType = 'blob';
+      xhr.open('GET', uri, true);
+      xhr.send(null);
+    });
+   
+
+    // Upload the Blob to Firebase Storage
+    const fileName = uri.split('/').pop();
+    
+    const storageRef = ref(storage, `recipe_images/${Date.now()}-${fileName}`);
+  
+    uploadBytes(storageRef, blob).then((snapshot) => {
+      console.log('Uploaded a blob or file!', snapshot);
+    
+    });
+  
+    // Get the download URL
+    const downloadUrl = await getDownloadURL(storageRef);
+    console.log('Image uploaded successfully:', downloadUrl);
+    // Clean up the Bl
+    blob.close();
+    return downloadUrl;
+  } catch (err) {
+    console.error('Upload error:', err);
+    Alert.alert('Upload Failed', err.message || 'There was a problem uploading the image.');
+  }
+};
 
 const renderRecipe = ({ item }) => {
+  
   return (
     <TouchableOpacity
       style={styles.card}
@@ -384,6 +460,22 @@ return (
             </TouchableOpacity>
           </View>
           <ScrollView>
+          <View style={styles.avatarContainer}>
+        
+    
+      </View>
+       <View style={styles.avatarContainer}>
+              <TouchableOpacity onPress={pickImage}>
+                {profileImageUri ? (
+                  <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
+                ) : (
+                  <Ionicons name="person-circle-outline" size={100} color="#B22222" />
+                )}
+              </TouchableOpacity>
+              <Text style={styles.avatarText}>Tap to select an image</Text>
+          </View>
+          <View style={styles.divider} />
+            
             {/* Form Fields */}
             <TextInput
               style={styles.input}
@@ -405,7 +497,7 @@ return (
                 onChangeText={(t) => setCurrentItem({ ...currentItem, quantity: t })}
               />
               <TouchableOpacity style={styles.smallButton} onPress={handleAddItem}>
-                <Ionicons name="add-circle" size={28} color="#B22222" />
+                <Ionicons name="add-circle" size={28} color="B22222" />
               </TouchableOpacity>
             </View>
             <Text style={styles.subHeader}>Items:</Text>
@@ -431,7 +523,7 @@ return (
                       onPress={() => {
                         setNewRecipe((prev) => ({
                           ...prev,
-                          bottles: [...prev.bottles, { id: b._id, name: b.name, image: b.image }],
+                          bottles: [...prev.bottles, { id: b._id, name: b.name, imageurl: b.image }],
                         }));
                         setBottleSearchText('');
                         setSearchResults([]);
@@ -447,7 +539,7 @@ return (
             <View style={styles.selectedBottleContainer}>
               {newRecipe.bottles.map((b, i) => (
                 <View key={i} style={styles.selectedBottle}>
-                  <Image source={{ uri: b.image }} style={styles.selectedBottleImage} />
+                  <Image source={{ uri: b.imageUrl }} style={styles.selectedBottleImage} />
                   <Text style={styles.selectedBottleName}>{b.name}</Text>
                   <TouchableOpacity onPress={() => handleRemoveBottle(b.id)}>
                     <Ionicons name="close-circle" size={18} color="#B22222" />
@@ -552,7 +644,7 @@ return (
                   <Text style={styles.commentAuthor}>
                     {comment.userName || 'Anonymous'}:
                   </Text>
-                  <Text style={styles.commentText}>{comment.text}</Text>
+                  <Text style={styles.commentText}>{comment.comment}</Text>
                   {comment.userId === user._id && (
                     <TouchableOpacity onPress={() => handleDeleteComment(comment._id)}>
                       <Ionicons name="trash" size={20} color="red" />
@@ -573,7 +665,7 @@ return (
                 onChangeText={setNewComment}
               />
               <TouchableOpacity onPress={handleAddComment} disabled={!newComment.trim()}>
-                <Ionicons name="send" size={24} color={newComment.trim() ? '#2E8B57' : '#ccc'} />
+                <Ionicons name="send" size={24} color={newComment.trim() ? '#B22222' : '#ccc'} />
               </TouchableOpacity>
             </View>
           </View>
@@ -594,7 +686,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f5fa',
   },
   header: {
-    height: 180,
+    height: 150,
     justifyContent: 'center',
     alignItems: 'center',
     borderBottomLeftRadius: 24,
@@ -785,7 +877,7 @@ const styles = StyleSheet.create({
   },
   commentAuthor: {
     fontWeight: 'bold',
-    color: '#2E8B57',
+    color: '#B22222',
     marginRight: 6,
   },
   commentText: {
@@ -822,5 +914,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#555',
     lineHeight: 22,
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  avatarLarge: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: '#B22222',
+    marginBottom: 12,
   },
 });

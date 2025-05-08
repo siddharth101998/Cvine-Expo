@@ -30,10 +30,6 @@ const ProfileScreen = () => {
     }
   };
 
-  
-
-
-
   // const fetchSearchHistory = async () => {
   //   if (!user) return;
   //   try {
@@ -148,46 +144,47 @@ const ProfileScreen = () => {
   }) : [];
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.container}>
       {/* Gradient Header */}
       <LinearGradient
         colors={['#B22222', '#FF6347']}
         style={styles.gradientHeader}
       >
-        <TouchableOpacity onPress={() => {/* settings action */ }}>
+        <TouchableOpacity
+          style={styles.settingsIcon}
+          onPress={() => {
+            // Add settings action here
+          }}
+        >
           <Ionicons name="settings-outline" size={28} color="#fff" />
         </TouchableOpacity>
+
+        {/* Avatar and Username */}
+        <View style={styles.avatarContainer}>
+          <TouchableOpacity onPress={pickImage}>
+            {profileImageUri ? (
+              <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
+            ) : (
+              <Ionicons name="person-circle-outline" size={100} color="#fff" />
+            )}
+          </TouchableOpacity>
+          <Text style={styles.username}>{user.username}</Text>
+        </View>
+
+        {/* Stats Section */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statBox}>
+            <Ionicons name="book-outline" size={24} color="#fff" />
+            <Text style={styles.statNumber}>{recipeCount}</Text>
+            <Text style={styles.statLabel}>Recipes</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Ionicons name="ribbon-outline" size={24} color="#fff" />
+            <Text style={styles.statNumber}>{badgeDetails.length}</Text>
+            <Text style={styles.statLabel}>Badges</Text>
+          </View>
+        </View>
       </LinearGradient>
-
-      {/* Avatar and Username */}
-      <View style={styles.avatarContainer}>
-        <TouchableOpacity onPress={pickImage}>
-          {profileImageUri ? (
-            <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
-          ) : (
-            <Ionicons name="person-circle-outline" size={100} color="#fff" />
-          )}
-        </TouchableOpacity>
-        <Text style={styles.username}>{user.username}</Text>
-      </View>
-
-      {/* Stats Section */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statBox}>
-          <Ionicons name="book-outline" size={24} color="#B22222" />
-          <Text style={styles.statNumber}>{recipeCount}</Text>
-          <Text style={styles.statLabel}>Recipes</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Ionicons name="ribbon-outline" size={24} color="#B22222" />
-          <Text style={styles.statNumber}>{badgeDetails.length}</Text>
-          <Text style={styles.statLabel}>Badges</Text>
-        </View>
-      </View>
 
       {/* Badges Section */}
       <View style={styles.section}>
@@ -203,7 +200,7 @@ const ProfileScreen = () => {
         </View>
       </View>
 
-      {/* Tab Selector */}
+      {/* Tabs Section */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'wishlist' && styles.activeTab]}
@@ -224,65 +221,59 @@ const ProfileScreen = () => {
       </View>
 
       {/* Tab Content */}
-      <View style={styles.tabContent}>
-        {activeTab === 'wishlist' ? (
-          <ScrollView
-            style={styles.scrollableTab}
-            contentContainerStyle={{ paddingBottom: 16 }}
-            showsVerticalScrollIndicator={false}
-          >
-            {wishlistBottles.map((item, idx) => (
-              <TouchableOpacity
-                key={item._id ?? idx.toString()}
-                style={styles.listItem}
-                onPress={() => navigation.navigate('Bottle', { id: item._id })}
-              >
-                <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
-                <Text style={styles.listText}>{item.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        ) : (
-          <ScrollView
-            style={styles.scrollableTab}
-            contentContainerStyle={{ paddingBottom: 16 }}
-            showsVerticalScrollIndicator={false}
-          >
-            {searchHistory.map((item, idx) => (
-              <TouchableOpacity
-                key={item._id ?? idx.toString()}
-                style={styles.listItem}
-                onPress={() => navigation.navigate('Bottle', { id: item.bottle._id })}
-              >
-                <Image source={{ uri: item.bottle.imageUrl }} style={styles.cardImage} />
-                <Text style={styles.listText}>{item.bottle.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
-      </View>
-    </ScrollView>
+      {/* Scrollable content below */}
+  <ScrollView style={styles.scrollableContent} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}>
+    {activeTab === 'wishlist' ? (
+      wishlistBottles.map((item, idx) => (
+        <TouchableOpacity
+          key={item._id ?? idx.toString()}
+          style={styles.listItem}
+          onPress={() => navigation.navigate('Bottle', { id: item._id })}
+        >
+          <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+          <Text style={styles.listText}>{item.name}</Text>
+        </TouchableOpacity>
+      ))
+    ) : (
+      searchHistory.map((item, idx) => (
+        <TouchableOpacity
+          key={item._id ?? idx.toString()}
+          style={styles.listItem}
+          onPress={() => navigation.navigate('Bottle', { id: item.bottle._id })}
+        >
+          <Image source={{ uri: item.bottle.imageUrl }} style={styles.cardImage} />
+          <Text style={styles.listText}>{item.bottle.name}</Text>
+        </TouchableOpacity>
+      ))
+    )}
+  </ScrollView>
+    </View>
   );
 };
 
 export default ProfileScreen;
 
 const styles = StyleSheet.create({
-  screen: {
+  container: {
     flex: 1,
     backgroundColor: '#f4f5fa',
   },
   gradientHeader: {
-    height: 180,
+    height: 250,
     justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
+    alignItems: 'center',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
+    paddingHorizontal: 16,
+  },
+  settingsIcon: {
+    position: 'absolute',
+    top: 40,
+    right: 16,
   },
   avatarContainer: {
     alignItems: 'center',
-    marginTop: -50,
+    marginTop: 20,
   },
   avatarLarge: {
     width: 100,
@@ -291,34 +282,35 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#fff',
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
   username: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#fff',
     marginTop: 8,
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginTop: 16,
-    paddingHorizontal: 16,
+    width: '100%',
   },
   statBox: {
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     padding: 16,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    width: '45%',
+    width: '40%',
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginTop: 8,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#fff',
   },
   section: {
     marginTop: 24,
@@ -342,6 +334,22 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
+  tabContent: {
+    flex: 1, // Take up the remaining space below the header
+    marginTop: 16,
+    marginHorizontal: 16,
+  },
+  scrollableContainer: {
+    flex: 1, // Ensure the ScrollView container takes up the full height
+  },
+  scrollableTab: {
+    flexGrow: 1, // Allow the content to grow and scroll
+  },
+  scrollableContent: {
+    flex: 1,
+    marginTop: 16,
+  },
+  
   tabContainer: {
     flexDirection: 'row',
     marginHorizontal: 16,
@@ -371,7 +379,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginHorizontal: 16,
   },
-  scrollableTab: {
+  scrollableContainer: {
     flex: 1,
   },
   listItem: {
