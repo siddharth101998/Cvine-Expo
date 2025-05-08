@@ -11,8 +11,8 @@ import axios from 'axios';
 
 // 🔧 Replace this with your actual IP if you're calling a local backend
 
-//const host = "http://localhost:5002"
-const host = "https://cvine.onrender.com"
+const host = "http://localhost:5002"
+//rconst host = "https://cvine.onrender.com"
 // 🔐 Register User
 export const registerUser = async (email, password, firstName) => {
     try {
@@ -43,15 +43,10 @@ export const registerUser = async (email, password, firstName) => {
 
 export const loginUser = async (email, password) => {
     try {
-        // ↓↓ Skip Firebase sign-in
-        // const userCredential = await signInWithEmailAndPassword(
-        //     auth,
-        //     email,
-        //     password
-        // );
-        // const user = userCredential.user;
+     
+        console.log(`${host}/user/login`,email);
 
-        // Hit your backend for auth
+        console.log(`${host}/user/login`,password);
         const res = await axios.post(`${host}/user/login`, {
             email,
             password,

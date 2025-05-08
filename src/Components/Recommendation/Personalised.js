@@ -12,7 +12,7 @@ const Personalized = ({ }) => {
             try {
                 const stored = await AsyncStorage.getItem('wineRecommendations');
                 if (stored) {
-                    console.log("recommmm", JSON.parse(stored))
+                
                     setRecommendations(JSON.parse(stored));
                 }
             } catch (e) {

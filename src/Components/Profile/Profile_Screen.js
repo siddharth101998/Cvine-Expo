@@ -69,8 +69,9 @@ const ProfileScreen = () => {
   const fetchRecipeCount = async () => {
     if (!user) return;
     try {
+      console.log("user id:", user._id);
       const res = await axios.get(`http://localhost:5002/recipe/count/${user._id}`);
-      console.log("recipe count response:", res.data.count);
+      console.log("recipe count response:", res.data);
       setRecipeCount(res.data.count);
     } catch (error) {
       console.error("Error fetching count of recipes :", error);
@@ -138,6 +139,7 @@ const ProfileScreen = () => {
   const badgeDetails = Array.isArray(user.badges) ? user.badges.map(badgeId => {
     // For demonstration, assume badgeId is an object with _id and badgeLogo
     // In case badgeId is just a string, create a placeholder
+    console.log(user.badges);
     if (typeof badgeId === 'object' && badgeId._id && badgeId.badgeLogo) {
       return badgeId;
     }
@@ -152,42 +154,46 @@ const ProfileScreen = () => {
       showsVerticalScrollIndicator={false}
     >
       {/* Gradient Header */}
-      <View style={styles.header}>
+      <LinearGradient
+        colors={['#B22222', '#FF6347']}
+        style={styles.gradientHeader}
+      >
         <TouchableOpacity onPress={() => {/* settings action */ }}>
-          <Ionicons name="settings-outline" size={24} color="black" />
+          <Ionicons name="settings-outline" size={28} color="#fff" />
         </TouchableOpacity>
-      </View>
-      {/* Avatar and name */}
+      </LinearGradient>
+
+      {/* Avatar and Username */}
       <View style={styles.avatarContainer}>
         <TouchableOpacity onPress={pickImage}>
           {profileImageUri ? (
             <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
           ) : (
-            <Ionicons name="person-circle-outline" size={100} color="black" />
+            <Ionicons name="person-circle-outline" size={100} color="#fff" />
           )}
         </TouchableOpacity>
-        <Text style={styles.usernameWhite}>{user.username}</Text>
+        <Text style={styles.username}>{user.username}</Text>
       </View>
-      <View style={styles.statsOverlay}>
-        <View style={[styles.statBox, { backgroundColor: '#fff' }]}>
-          <Text style={[styles.statNumber, { color: 'black' }]}>{recipeCount}</Text>
-          <Text style={styles.statLabel}>
-          <TouchableOpacity onPress={() => navigation.navigate('UserRecipes', { userId: user._id })}>
-                        <Text style={{ color: 'black', fontSize: 16 }}>Recipes</Text>
-                    </TouchableOpacity>
-            </Text>
+
+      {/* Stats Section */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statBox}>
+          <Ionicons name="book-outline" size={24} color="#B22222" />
+          <Text style={styles.statNumber}>{recipeCount}</Text>
+          <Text style={styles.statLabel}>Recipes</Text>
         </View>
-        <View style={[styles.statBox, { backgroundColor: '#fff' }]}>
-          <Text style={[styles.statNumber, { color: 'black' }]}>{badgeDetails.length}</Text>
+        <View style={styles.statBox}>
+          <Ionicons name="ribbon-outline" size={24} color="#B22222" />
+          <Text style={styles.statNumber}>{badgeDetails.length}</Text>
           <Text style={styles.statLabel}>Badges</Text>
         </View>
       </View>
 
-      {/* Badges */}
+      {/* Badges Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Badges</Text>
         <View style={styles.badgesList}>
-          {badgeDetails.map(badge => (
+          {badgeDetails.map((badge) => (
             <Image
               key={badge._id}
               source={{ uri: badge.badgeLogo }}
@@ -218,34 +224,43 @@ const ProfileScreen = () => {
       </View>
 
       {/* Tab Content */}
-      {activeTab === 'wishlist' ? (
-        wishlistBottles.map((item, idx) => (
-
-          <TouchableOpacity
-            key={item._id ?? idx.toString()}
-            style={styles.listItem}
-            onPress={() => navigation.navigate('Bottle', { id: item._id })}
+      <View style={styles.tabContent}>
+        {activeTab === 'wishlist' ? (
+          <ScrollView
+            style={styles.scrollableTab}
+            contentContainerStyle={{ paddingBottom: 16 }}
+            showsVerticalScrollIndicator={false}
           >
-            <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
-            <Text style={styles.listText}>{item.name}</Text>
-          </TouchableOpacity>
-        ))
-      ) : (
-        <View style={styles.section}>
-          {searchHistory.map((item, idx) => (
-
-            <TouchableOpacity
-              key={item._id ?? idx.toString()}
-              style={styles.listItem}
-              onPress={() => navigation.navigate('Bottle', { id: item.bottle._id })}
-
-            >
-              <Image source={{ uri: item.bottle.imageUrl }} style={styles.cardImage} />
-              <Text style={styles.listText}>{item.bottle.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+            {wishlistBottles.map((item, idx) => (
+              <TouchableOpacity
+                key={item._id ?? idx.toString()}
+                style={styles.listItem}
+                onPress={() => navigation.navigate('Bottle', { id: item._id })}
+              >
+                <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+                <Text style={styles.listText}>{item.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <ScrollView
+            style={styles.scrollableTab}
+            contentContainerStyle={{ paddingBottom: 16 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {searchHistory.map((item, idx) => (
+              <TouchableOpacity
+                key={item._id ?? idx.toString()}
+                style={styles.listItem}
+                onPress={() => navigation.navigate('Bottle', { id: item.bottle._id })}
+              >
+                <Image source={{ uri: item.bottle.imageUrl }} style={styles.cardImage} />
+                <Text style={styles.listText}>{item.bottle.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+      </View>
     </ScrollView>
   );
 };
@@ -256,111 +271,76 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f5fa',
-    top: 5,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginTop: 50,
-    width: '100%',
   },
   gradientHeader: {
-    height: 220,
-    paddingTop: 50,
+    height: 180,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
     paddingHorizontal: 16,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
   avatarContainer: {
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: -50,
   },
   avatarLarge: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    marginBottom: 16,
+    borderWidth: 3,
+    borderColor: '#fff',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
-  usernameWhite: {
-    marginTop: 12,
+  username: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: 'Black',
+    color: '#333',
+    marginTop: 8,
   },
-  statsOverlay: {
+  statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 22,
+    marginTop: 16,
+    paddingHorizontal: 16,
   },
   statBox: {
-    flex: 1,
     alignItems: 'center',
-    paddingVertical: 16,
-    marginHorizontal: 8,
+    backgroundColor: '#fff',
+    padding: 16,
     borderRadius: 12,
-    // shadow
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 4,
     elevation: 2,
-  },
-  statNumber: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#5b3dff',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+    width: '45%',
   },
   section: {
     marginTop: 24,
     marginHorizontal: 16,
-    paddingHorizontal: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: 'black',
+    color: '#333',
     marginBottom: 12,
-    paddingBottom: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   badgesList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'flex-start',
   },
   badgeLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     marginRight: 8,
     marginBottom: 8,
-  },
-  listItem: {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    // subtle card style
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  listText: {
-    fontSize: 16,
-    color: '#333',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -376,7 +356,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeTab: {
-    backgroundColor: '#5b3dff',
+    backgroundColor: '#B22222',
   },
   tabText: {
     fontSize: 16,
@@ -386,17 +366,35 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#e0e0e0',
+  tabContent: {
+    flex: 1,
+    marginTop: 16,
     marginHorizontal: 16,
-    marginVertical: 16,
+  },
+  scrollableTab: {
+    flex: 1,
+  },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   cardImage: {
-    width: 40,
-    height: 40,
+    width: 50,
+    height: 50,
     borderRadius: 8,
     marginRight: 12,
-    objectFit: 'contain'
+  },
+  listText: {
+    fontSize: 16,
+    color: '#333',
   },
 });

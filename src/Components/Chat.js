@@ -55,9 +55,12 @@ const ChatScreen = () => {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={90}
         >
+            {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.headerText}>Wine AI</Text>
             </View>
+
+            {/* Messages */}
             <ScrollView
                 contentContainerStyle={styles.messagesContainer}
                 showsVerticalScrollIndicator={false}
@@ -81,7 +84,7 @@ const ChatScreen = () => {
                         key={index}
                         style={[
                             styles.messageBubble,
-                            msg.role === 'user' ? styles.userBubble : styles.aiBubble
+                            msg.role === 'user' ? styles.userBubble : styles.aiBubble,
                         ]}
                     >
                         <Text style={styles.messageText}>{msg.content}</Text>
@@ -92,15 +95,13 @@ const ChatScreen = () => {
                 )}
             </ScrollView>
 
-            {/* Bottom Input */}
+            {/* Input Field */}
             <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.input}
                     placeholder="Type a message..."
                     value={input}
                     onChangeText={setInput}
-
-
                 />
                 <TouchableOpacity style={styles.sendButton} onPress={() => sendMessage(input)}>
                     <Text style={styles.sendButtonText}>Send</Text>
@@ -116,7 +117,8 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fcf8f5',
-    }, header: {
+    },
+    header: {
         paddingTop: 50,
         paddingBottom: 20,
         backgroundColor: '#B22222',
@@ -129,7 +131,7 @@ const styles = StyleSheet.create({
     },
     messagesContainer: {
         padding: 15,
-        paddingBottom: 90, // to avoid keyboard overlap
+        paddingBottom: 90, // To avoid keyboard overlap
     },
     exampleContainer: {
         marginBottom: 20,
@@ -138,34 +140,45 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         marginBottom: 10,
+        color: '#333',
     },
     exampleButton: {
-        backgroundColor: '#f0f0f0',
-        padding: 10,
-        borderRadius: 10,
+        backgroundColor: '#f9f9f9',
+        padding: 12,
+        borderRadius: 12,
         marginBottom: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
     },
     exampleButtonText: {
         fontSize: 16,
-        color: '#333',
+        color: '#555',
     },
     messageBubble: {
         maxWidth: '80%',
-        padding: 10,
-        borderRadius: 10,
+        padding: 12,
+        borderRadius: 16,
         marginBottom: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
     },
     userBubble: {
         alignSelf: 'flex-end',
-        backgroundColor: '#2E8B57',
+        backgroundColor: '#B22222',
     },
     aiBubble: {
         alignSelf: 'flex-start',
-        backgroundColor: '#ccc',
+        backgroundColor: '#B22222',
     },
     messageText: {
-        color: '#fff',
         fontSize: 16,
+        color: '#fff',
     },
     inputContainer: {
         position: 'absolute',
@@ -180,11 +193,13 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: '#f9f9f9',
         borderRadius: 25,
         paddingHorizontal: 15,
         fontSize: 16,
         height: 45,
+        borderWidth: 1,
+        borderColor: '#ddd',
     },
     sendButton: {
         backgroundColor: '#B22222',

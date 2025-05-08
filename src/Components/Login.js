@@ -41,7 +41,7 @@ const LoginScreen = () => {
             } else {
                 console.log("started")
                 const res = await loginUser(email, password);
-                fetchUserRecommendations(res._id)
+                //fetchUserRecommendations(res._id)
                 login(res);
 
                 navigation.navigate("Home"); // Make sure Home screen exists in your navigator

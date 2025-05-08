@@ -323,7 +323,7 @@ const localStyles = StyleSheet.create({
         objectFit: 'contain'
     },
     addButton: {
-        backgroundColor: '#2E8B57',
+        backgroundColor: '#B22222',
         padding: 12,
         borderRadius: 8,
         alignItems: 'center',
