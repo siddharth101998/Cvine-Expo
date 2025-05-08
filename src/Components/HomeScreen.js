@@ -19,6 +19,7 @@ import logo from '../../assets/logo.png';
 import LoginPrompt from './LoginPrompt';
 import { host } from '../API-info/apiifno';
 import { useAuth } from '../authContext/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const HomeScreen = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [searchText, setSearchText] = useState('');
@@ -38,14 +39,12 @@ const HomeScreen = () => {
         navigation.navigate('Scan');
     };
     useEffect(() => {
-        // fetchCountries();git add 
-        // fetchWineTypes();
-        // fetchGrapeTypes();
         fetchTrending();
+    }, []);
+    useEffect(() => {
         if (user) { fetchUserRecommendations() }
 
-        console.log("user details", user)
-    }, []);
+    }, [user])
     const fetchUserRecommendations = async (userId) => {
         try {
             const searchRes = await axios.get(`${host}/searchHistory/${userId}`);
@@ -87,6 +86,7 @@ const HomeScreen = () => {
             }
 
             const recRes = await axios.post(`${host}/api/recommend`, { selectedBottles });
+            console.log("recieved recomendation");
             const recommendations = recRes.data.recommendations || [];
             await AsyncStorage.setItem('wineRecommendations', JSON.stringify(recommendations));
         } catch (error) {
@@ -119,74 +119,15 @@ const HomeScreen = () => {
             console.error('Error fetching personalized recommendations:', error);
         }
     };
-
-    const fetchCountries = async () => {
-        try {
-            const response = await axios.get(`${host}/region`);
-            setCountries(response.data);
-        } catch (error) {
-            console.error("Error fetching countries:", error);
-        }
-    };
-
-    const fetchWineTypes = async () => {
-        try {
-            const response = await axios.get(`${host}/winetype`);
-            setWineTypes(response.data);
-        } catch (error) {
-            console.error("Error fetching wine types:", error);
-        }
-    };
-
-    const fetchGrapeTypes = async () => {
-        try {
-            const response = await axios.get(`${host}/grapetype`);
-            setGrapeTypes(response.data);
-        } catch (error) {
-            console.error("Error fetching grape types:", error);
-        }
-    };
     const fetchTrending = async () => {
         try {
+            console.log("fetching trending");
             const response = await axios.get(`${host}/bottle/trending`);
             console.log("resss", response.data)
             setTrending(response.data);
         } catch (error) {
             console.error("Error fetching trending items:", error);
         }
-    };
-
-
-
-    const fetchBottles = async (query) => {
-        if (!query) {
-            setSearchResults([]);
-            return;
-        }
-        setLoading(true);
-        try {
-            const response = await axios.get(`${host}/bottle/search`, {
-                params: {
-                    q: query,
-                    country: selectedCountry,
-                    winetype: selectedWineType,
-                    grapetype: selectedGrapeType,
-                },
-            });
-            setSearchResults(response.data.data);
-        } catch (error) {
-            console.error("Error fetching search results:", error);
-        }
-        setLoading(false);
-    };
-
-    const debouncedSearch = debounce((query) => {
-        fetchBottles(query);
-    }, 300);
-
-    const handleSearch = (text) => {
-        setSearchText(text);
-        debouncedSearch(text);
     };
 
     const handleBottleClick = (bottleId) => {
