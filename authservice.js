@@ -8,11 +8,21 @@
 //     signOut,
 // } from 'firebase/auth';
 import axios from 'axios';
+import {
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    StyleSheet,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+} from 'react-native';
 
 // 🔧 Replace this with your actual IP if you're calling a local backend
 
-//const host = "http://localhost:5002"
-const host = "https://cvine.onrender.com"
+const host = "http://localhost:5002"
+// const host = "https://cvine.onrender.com"
 // 🔐 Register User
 export const registerUser = async (email, password, username, fullName) => {
     try {
@@ -34,11 +44,16 @@ export const registerUser = async (email, password, username, fullName) => {
             username,
             fullName,
         });
+        if (res.ok){ Alert.alert('Success', 'Account created successfully!');}
 
         return res.data.data;
     } catch (error) {
-        throw error;
-    }
+        // AxiosError for 400, 500, etc:
+        if (error.response && error.response.data && error.response.data.message) {  Alert.alert('Error', error.response.data.message);
+        } else {
+          Alert.alert('Error', error.message || 'Something went wrong');
+        }
+      }
 };
 
 

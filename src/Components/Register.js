@@ -27,8 +27,7 @@ const RegisterScreen = () => {
         }
 
         try {
-            await registerUser(email, password, username, fullName);
-            Alert.alert('Success', 'Account created successfully!');
+            const res = await registerUser(email, password, username, fullName);
             setUsername('');
             setFullName('');
             setEmail('');

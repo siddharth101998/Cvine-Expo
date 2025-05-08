@@ -34,7 +34,7 @@ const LoginScreen = () => {
             }
             if (isRegister) {
                 await registerUser(email, password, username, fullName);
-                Alert.alert("Registered successfully!");
+                // Alert.alert("Registered successfully!");
                 setUsername('');
                 setFullName('');
                 setEmail('');
