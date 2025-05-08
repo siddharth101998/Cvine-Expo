@@ -67,7 +67,8 @@ export const loginUser = async (email, password) => {
         // );
         // const user = userCredential.user;
 
-        // Hit your backend for auth
+        console.log(`${host}/user/login`);
+
         const res = await axios.post(`${host}/user/login`, {
             email,
             password,

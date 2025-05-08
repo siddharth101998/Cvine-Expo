@@ -11,12 +11,13 @@ import {
     Platform,
 } from 'react-native';
 import { loginUser, registerUser } from '../../authservice';
-//import logo from '../assets/logo.png'; // Ensure the file exists
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../authContext/AuthContext';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { host } from '../API-info/apiifno';
+import logo from '../../assets/logo.png'; // your logo path
+
 const LoginScreen = () => {
     const [isRegister, setIsRegister] = useState(false);
     const [email, setEmail] = useState('');
@@ -25,6 +26,7 @@ const LoginScreen = () => {
     const [fullName, setFullName] = useState('');
     const { login } = useAuth();
     const navigation = useNavigation();
+    const [islogin, setIslogin] = useState(false);
 
     const handleSubmit = async () => {
         try {
@@ -41,17 +43,20 @@ const LoginScreen = () => {
                 setPassword('');
                 setIsRegister(false);
             } else {
-                console.log("started")
                 const res = await loginUser(email, password);
-                fetchUserRecommendations(res._id)
+                //fetchUserRecommendations(res._id);
                 login(res);
-
-                navigation.navigate("Home"); // Make sure Home screen exists in your navigator
+                navigation.navigate("Home");
             }
         } catch (err) {
             Alert.alert("Error", err.message || "Something went wrong");
         }
     };
+
+    const guestlogin = () => {
+        navigation.navigate("Home");
+    };
+
     const handlelogin = () => {
         setUsername('');
         setFullName('');
@@ -59,30 +64,26 @@ const LoginScreen = () => {
         setPassword('');
         setIsRegister(!isRegister)
     }
+
     const fetchUserRecommendations = async (userId) => {
         try {
-            // Fetch search history
             const searchRes = await axios.get(`${host}/searchHistory/${userId}`);
             const searchHistory = searchRes.data || [];
 
-            // Fetch wishlist
             const wishlistRes = await axios.get(`${host}/wishlist/${userId}`);
             const wishlist = wishlistRes.data.bottles || [];
 
-            // Extract last 3 searched bottle names
             const recentSearches = searchHistory
                 .slice(-3)
                 .map(entry => entry.bottle?.name)
                 .filter(Boolean);
 
-            // Randomly select up to 7 bottles from wishlist
             const shuffledWishlist = wishlist.sort(() => 0.5 - Math.random());
             const wishlistSelections = shuffledWishlist
                 .map(bottle => bottle.name)
                 .filter(Boolean)
                 .slice(0, 7);
 
-            // Combine and fill with sample bottles if needed
             let selectedBottles = [...recentSearches, ...wishlistSelections];
             const SAMPLE_BOTTLES = [
                 "Château Lafite Rothschild 2015",
@@ -104,27 +105,21 @@ const LoginScreen = () => {
                 selectedBottles = [...selectedBottles, ...fallback.slice(0, needed)];
             }
 
-            // Fetch recommendations
             const recRes = await axios.post(`${host}/api/recommend`, { selectedBottles });
             const recommendations = recRes.data.recommendations || [];
-
-            // Store recommendations
             await AsyncStorage.setItem('wineRecommendations', JSON.stringify(recommendations));
         } catch (error) {
             console.error('Error fetching personalized recommendations:', error);
         }
     };
 
+
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={styles.container}
         >
-            <Image style={styles.logo} />
-            <Text style={styles.title}>{isRegister ? 'Sign Up' : 'Welcome Back!'}</Text>
-            <Text style={styles.subtitle}>
-                {isRegister ? 'Create an account to get started!' : 'Log in to continue'}
-            </Text>
+            <Image source={logo} style={styles.logo} />
 
             {isRegister && (
                 <>
@@ -144,37 +139,77 @@ const LoginScreen = () => {
                 </>
             )}
 
-            <TextInput
-                placeholder="Email"
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-            />
-            <TextInput
-                placeholder="Password"
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-            />
+            {islogin && (
+                <>
+                    <Text style={styles.title}>Login</Text>
+                    <Text style={styles.subtitle}>Login and Enhance your wine Discovery</Text>
 
-            <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                <Text style={styles.buttonText}>{isRegister ? 'Register' : 'Login'}</Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity onPress={handlelogin}>
-                <Text style={styles.switchText}>
-                    {isRegister ? 'Already have an account? Login' : "Don't have an account? Register"}
-                </Text>
-            </TouchableOpacity>
+                    <TextInput
+                        placeholder="Email"
+                        style={styles.input}
+                        value={email}
+                        onChangeText={setEmail}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                    />
+                    <TextInput
+                        placeholder="Password"
+                        style={styles.input}
+                        value={password}
+                        onChangeText={setPassword}
+                        secureTextEntry
+                    />
+                    <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+                        <Text style={styles.buttonText}>Login</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handlelogin}>
+                        <Text style={styles.switchText}>ADon't have an account? Register</Text>
+                    </TouchableOpacity>
+                </>
+            )
+
+            }
+
+            {isRegister && (
+                <>
+                    <Text style={styles.title}>Sign Up</Text>
+                    <Text style={styles.subtitle}>Create an account to get started!</Text>
+
+                    <TextInput
+                        placeholder="First Name"
+                        style={styles.input}
+                        value={firstName}
+                        onChangeText={setFirstName}
+                    />
+                    <TextInput
+                        placeholder="Email"
+                        style={styles.input}
+                        value={email}
+                        onChangeText={setEmail}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                    />
+                    <TextInput
+                        placeholder="Password"
+                        style={styles.input}
+                        value={password}
+                        onChangeText={setPassword}
+                        secureTextEntry
+                    />
+                    <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+                        <Text style={styles.buttonText}>Register</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handlelogin}>
+                        <Text style={styles.switchText}>Already have an account? Login</Text>
+                    </TouchableOpacity>
+                </>
+            )}
         </KeyboardAvoidingView>
     );
 };
 
 export default LoginScreen;
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -182,13 +217,13 @@ const styles = StyleSheet.create({
         padding: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        width: '100%'
+        width: '100%',
     },
     logo: {
-        width: 200,
-        height: 180,
-        marginBottom: 30,
+        width: 180,
+        height: 120,
         resizeMode: 'contain',
+        marginBottom: 30,
     },
     title: {
         fontSize: 26,
@@ -215,18 +250,35 @@ const styles = StyleSheet.create({
         backgroundColor: '#2E8B57',
         paddingVertical: 14,
         borderRadius: 8,
-        width: '100%',
+        width: '48%',
         alignItems: 'center',
-        marginTop: 5,
     },
     buttonText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
     },
+    buttonRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+        marginBottom: 15,
+    },
+    skipButton: {
+        backgroundColor: '#D3D3D3',
+        paddingVertical: 14,
+        borderRadius: 8,
+        width: '48%',
+        alignItems: 'center',
+    },
+    skipButtonText: {
+        color: '#000',
+        fontSize: 16,
+        fontWeight: '600',
+    },
     switchText: {
         color: '#B22222',
-        marginTop: 20,
+        marginTop: 15,
         fontWeight: 'bold',
     },
 });
