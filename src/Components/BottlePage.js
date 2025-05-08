@@ -35,7 +35,7 @@ const BottlePage = () => {
         const fetchBottle = async () => {
             try {
                 const response = await axios.get(`${host}/bottle/${id}`);
-             
+
                 setBottle(response.data.data);
                 if (user && response.data?.data?._id) {
                     try {
@@ -69,7 +69,7 @@ const BottlePage = () => {
                 userId: user._id,
                 bottleId: bottle._id
             });
-           
+
             setIsWishlisted(prev => !prev);
         } catch (err) {
             console.error('Failed to toggle wishlist:', err);
@@ -154,6 +154,7 @@ const styles = StyleSheet.create({
         rowGap: 16,
         columnGap: 16,
         width: '100%',
+        marginBottom: 50
     },
     infoColumn: {
         width: '47%',

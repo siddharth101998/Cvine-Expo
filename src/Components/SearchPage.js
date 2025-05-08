@@ -21,34 +21,52 @@ const SearchPage = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [searchText, setSearchText] = useState('');
     const [loading, setLoading] = useState(false);
-     const [countries, setCountries] = useState([]);
+    const [countries, setCountries] = useState([]);
     const [wineTypes, setWineTypes] = useState([]);
     const [grapeTypes, setGrapeTypes] = useState([]);
     const [selectedCountry, setSelectedCountry] = useState('');
     const [selectedWineType, setSelectedWineType] = useState('');
     const [selectedGrapeType, setSelectedGrapeType] = useState('');
+    const [selectedCountries, setSelectedCountries] = useState([]);
+    const [selectedWineTypes, setSelectedWineTypes] = useState([]);
+    const [selectedGrapeTypes, setSelectedGrapeTypes] = useState([]);
     const [showFilters, setShowFilters] = useState(false);
 
+    const toggleSelection = (item, selectedItems, setSelectedItems) => {
+        console.log("before updating,", selectedItems)
+        if (selectedItems.includes(item)) {
+
+            const updated = selectedItems.filter(i => i !== item);
+            setSelectedItems(updated);
+            console.log("after removing th item updating,", selectedItems)
+        } else {
+            setSelectedItems([...selectedItems, item]);
+            console.log("after adding ,", selectedItems)
+        }
+
+    };
     useEffect(() => {
         fetchCountries();
         fetchWineTypes();
         fetchGrapeTypes();
     }, []);
+    useEffect(() => {
+        debouncedSearch(searchText);
+    }, [selectedWineTypes, selectedCountries, selectedGrapeTypes])
+
     const fetchBottles = async (query) => {
-        if (!query) {
-            setSearchResults([]);
-            return;
-        }
-        console.log('grape', selectedGrapeType);
+
+        //console.log('grape', selectedGrapeTypes);
+
         setLoading(true);
         try {
-            console.log(selectedCountry,selectedWineType,selectedGrapeType)
+            console.log(selectedWineTypes)
             const response = await axios.get(`${host}/bottle/search`, {
                 params: {
                     q: query,
-                    country: selectedCountry,
-                    winetype: selectedWineType,
-                    grapetype: selectedGrapeType,
+                    country: selectedCountries,
+                    wineType: selectedWineTypes,
+                    grapeType: selectedGrapeTypes,
                 },
             });
             setSearchResults(response.data.data);
@@ -57,7 +75,6 @@ const SearchPage = () => {
         }
         setLoading(false);
     };
-
     const fetchCountries = async () => {
         try {
             const response = await axios.get(`${host}/region`);
@@ -86,13 +103,14 @@ const SearchPage = () => {
     };
 
 
-  
+
     const debouncedSearch = debounce((query) => {
         fetchBottles(query);
-    }, 300);
+    }, 50);
 
     const handleSearch = (text) => {
         setSearchText(text);
+
         debouncedSearch(text);
     };
     const navigation = useNavigation();
@@ -101,135 +119,158 @@ const SearchPage = () => {
         console.log("Bottle selected:", bottleId);
     };
     return (<ScrollView style={styles.container}>
-   <View style={styles.header}>
+        <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()}>
                 <Ionicons name="arrow-back" size={24} color="black" />
             </TouchableOpacity>
             <Text style={styles.title}>Search Wines</Text>
         </View>
-         <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
-                        <Ionicons name="filter" size={18} />
-                        <Text style={styles.filterText}>Toggle Filters</Text>
-                    </TouchableOpacity>
-        
-                    {showFilters && (
-                        <View style={styles.filterContainer}>
-                            {/* Country Filter */}
-                            <Text style={styles.filterLabel}>Country</Text>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                {["", ...countries.map(c => c.country)].map((country) => (
-                                    <TouchableOpacity
-                                        key={country}
-                                        style={[styles.filterOption, selectedCountry === country && styles.selectedOption]}
-                                        onPress={() => setSelectedCountry(country)}
-                                    >
-                                        <Text>{country || "All"}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-        
-                            {/* Wine Type Filter */}
-                            <Text style={styles.filterLabel}>Wine Type</Text>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                {["", ...wineTypes.map(w => w.name)].map((type) => (
-                                    <TouchableOpacity
-                                        key={type}
-                                        style={[styles.filterOption, selectedWineType === type && styles.selectedOption]}
-                                        onPress={() => setSelectedWineType(type)}
-                                    >
-                                        <Text>{type || "All"}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-        
-                            {/* Grape Type Filter */}
-                            <Text style={styles.filterLabel}>Grape Type</Text>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                {["", ...grapeTypes.map(g => g.name)].map((type) => (
-                                    <TouchableOpacity
-                                        key={type}
-                                        style={[styles.filterOption, selectedGrapeType === type && styles.selectedOption]}
-                                        onPress={() => setSelectedGrapeType(type)}
-                                    >
-                                        <Text>{type || "All"}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-                        </View>
-                    )}
-        
-     
-
-        <View style={styles.searchBox}>
-            <Ionicons name="search" size={20} color="gray" style={{ marginRight: 8 }} />
-            <TextInput
-                placeholder="Search for a wine..."
-                value={searchText}
-                onChangeText={handleSearch}
-                style={styles.input}
-            />
-        </View>
-        <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
+        {/* <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
             <Ionicons name="filter" size={18} />
             <Text style={styles.filterText}>Toggle Filters</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
+
         {showFilters && (
             <View style={styles.filterContainer}>
+
                 {/* Country Filter */}
-                <Text style={styles.filterLabel}>Country</Text>
+                <View style={styles.filterHeader}>
+                    <Text style={styles.filterLabel}>Country</Text>
+                    {selectedCountries.length > 0 && (
+                        <TouchableOpacity onPress={() => setSelectedCountries([])}>
+                            <Text style={styles.clearButton}>Close Filters</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {["", ...countries.map(c => c.country)].map((country) => (
+                    <TouchableOpacity
+                        key="clear-countries"
+                        style={[
+                            styles.filterOption,
+                            selectedCountries.length === 0 && styles.selectedOption
+                        ]}
+                        onPress={() => setSelectedCountries([])}
+                    >
+                        <Text>ALL</Text>
+                    </TouchableOpacity>
+                    {countries.map((country) => (
                         <TouchableOpacity
-                            key={country}
-                            style={[styles.filterOption, selectedCountry === country && styles.selectedOption]}
-                            onPress={() => setSelectedCountry(country)}
+                            key={country.country}
+                            style={[
+                                styles.filterOption,
+                                selectedCountries.includes(country.country) && styles.selectedOption
+                            ]}
+                            onPress={() => { toggleSelection(country.country, selectedCountries, setSelectedCountries); }}
                         >
-                            <Text>{country || "All"}</Text>
+                            <Text>{country.country}</Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
 
                 {/* Wine Type Filter */}
-                <Text style={styles.filterLabel}>Wine Type</Text>
+                <View style={styles.filterHeader}>
+                    <Text style={styles.filterLabel}>Wine Type</Text>
+                    {selectedWineTypes.length > 0 && (
+                        <TouchableOpacity onPress={() => setSelectedWineTypes([])}>
+                            <Text style={styles.clearButton}>Close Filters</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {["", ...wineTypes.map(w => w.name)].map((type) => (
+                    <TouchableOpacity
+                        key="clear-winetypes"
+                        style={[
+                            styles.filterOption,
+                            selectedWineTypes.length === 0 && styles.selectedOption
+                        ]}
+                        onPress={() => setSelectedWineTypes([])}
+                    >
+                        <Text>ALL</Text>
+                    </TouchableOpacity>
+                    {wineTypes.map((w) => (
                         <TouchableOpacity
-                            key={type}
-                            style={[styles.filterOption, selectedWineType === type && styles.selectedOption]}
-                            onPress={() => setSelectedWineType(type)}
+                            key={w.name}
+                            style={[
+                                styles.filterOption,
+                                selectedWineTypes.includes(w.name) && styles.selectedOption
+                            ]}
+                            onPress={() => {
+                                toggleSelection(w.name, selectedWineTypes, setSelectedWineTypes);
+                            }}
                         >
-                            <Text>{type || "All"}</Text>
+                            <Text>{w.name}</Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
 
                 {/* Grape Type Filter */}
-                <Text style={styles.filterLabel}>Grape Type</Text>
+                <View style={styles.filterHeader}>
+                    <Text style={styles.filterLabel}>Grape Type</Text>
+                    {selectedGrapeTypes.length > 0 && (
+                        <TouchableOpacity onPress={() => setSelectedGrapeTypes([])}>
+                            <Text style={styles.clearButton}>Close Filters</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {["", ...grapeTypes.map(g => g.name)].map((type) => (
+                    <TouchableOpacity
+                        key="clear-grapetypes"
+                        style={[
+                            styles.filterOption,
+                            selectedGrapeTypes.length === 0 && styles.selectedOption
+                        ]}
+                        onPress={() => setSelectedGrapeTypes([])}
+                    >
+                        <Text>ALL</Text>
+                    </TouchableOpacity>
+                    {grapeTypes.map((g) => (
                         <TouchableOpacity
-                            key={type}
-                            style={[styles.filterOption, selectedGrapeType === type && styles.selectedOption]}
-                            onPress={() => setSelectedGrapeType(type)}
+                            key={g.name}
+                            style={[
+                                styles.filterOption,
+                                selectedGrapeTypes.includes(g.name) && styles.selectedOption
+                            ]}
+                            onPress={() => { toggleSelection(g.name, selectedGrapeTypes, setSelectedGrapeTypes); }}
                         >
-                            <Text>{type || "All"}</Text>
+                            <Text>{g.name}</Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
+
             </View>
         )}
+
+
+        <View style={styles.searchContainer}>
+            <View style={styles.searchBox}>
+                <Ionicons name="search" size={20} color="gray" style={{ marginRight: 8 }} />
+                <TextInput
+                    placeholder="Search for a wine..."
+                    value={searchText}
+                    onChangeText={handleSearch}
+                    style={styles.input}
+                />
+            </View>
+            <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterIcon}>
+                <Ionicons name="filter" size={22} color="gray" />
+            </TouchableOpacity>
+        </View>
+
         {loading && <ActivityIndicator style={{ marginVertical: 10 }} />}
 
-        {searchResults.slice(0, 3).map((item) => (
+        {searchResults.slice(0, 7).map((item) => (
             <TouchableOpacity key={item._id} style={styles.resultBox} onPress={() => handleBottleClick(item._id)}>
                 <View style={styles.resultRow}>
                     <Image source={{ uri: item.imageUrl }} style={styles.bottleImage} />
-                    <View style={{ marginLeft: 10 }}>
-                        <Text style={styles.resultTitle}>{item.name}</Text>
-                        <Text style={styles.resultSubtitle}>{item.winery}</Text>
+                    <View style={{ marginLeft: 10, }}>
+                        <Text style={styles.resultTitle}>
+                            {item.name}
+                        </Text>
+                        <Text style={styles.resultSubtitle}>{item.Winery}</Text>
                     </View>
                 </View>
             </TouchableOpacity>
+
         ))}
     </ScrollView>)
 }
@@ -242,18 +283,30 @@ const styles = StyleSheet.create({
         padding: 16,
         top: 60
     },
+    filterHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
+        marginTop: 10,
+    },
+
+    clearButton: {
+        fontSize: 12,
+        color: '#007BFF',
+        marginRight: 8,
+    },
+
     searchBox: {
         flexDirection: 'row',
-        backgroundColor: '#fff',
-        padding: 10,
-        borderRadius: 10,
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    input: {
         flex: 1,
-        fontSize: 16,
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        padding: 5,
+        borderRadius: 8,
+        marginRight: 5,
     },
+
     resultBox: {
         backgroundColor: '#fff',
         padding: 12,
@@ -261,10 +314,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         elevation: 2,
     },
-    resultTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
+
     resultSubtitle: {
         fontSize: 14,
         color: 'gray',
@@ -282,6 +332,7 @@ const styles = StyleSheet.create({
     resultRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        width: "80%"
     },
     bottleImage: {
         width: 50,
@@ -290,10 +341,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#eee',
         objectFit: 'contain'
     },
-    resultTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
+
     resultSubtitle: {
         fontSize: 14,
         color: 'gray',
@@ -307,6 +355,7 @@ const styles = StyleSheet.create({
     resultTitle: {
         fontSize: 16,
         fontWeight: 'bold',
+
     },
     resultSubtitle: {
         fontSize: 14,
@@ -369,5 +418,37 @@ const styles = StyleSheet.create({
     selectedOption: {
         backgroundColor: '#b22222',
         color: '#fff',
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 5,
+        marginBottom: 10,
+    },
+
+
+
+    input: {
+        flex: 1,
+        fontSize: 16,
+    },
+
+    filterIcon: {
+        padding: 6,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 8,
+    },
+
+    applyButton: {
+        backgroundColor: '#007BFF',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 6,
+    },
+
+    applyButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
     },
 })

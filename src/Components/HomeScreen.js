@@ -16,7 +16,7 @@ import debounce from 'lodash.debounce';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import logo from '../../assets/logo.png';
-
+import LoginPrompt from './LoginPrompt';
 import { host } from '../API-info/apiifno';
 import { useAuth } from '../authContext/AuthContext';
 const HomeScreen = () => {
@@ -33,11 +33,12 @@ const HomeScreen = () => {
     const [showFilters, setShowFilters] = useState(false);
     const navigation = useNavigation();
     const { user, updateUser } = useAuth();
+    const [showLoginModal, setShowLoginModal] = useState(false);
     const handleScan = () => {
         navigation.navigate('Scan');
     };
     useEffect(() => {
-        // fetchCountries();
+        // fetchCountries();git add 
         // fetchWineTypes();
         // fetchGrapeTypes();
         fetchTrending();
@@ -95,7 +96,7 @@ const HomeScreen = () => {
     const fetchGuestRecommendations = async (userId) => {
         try {
 
-            let selectedBottles = [...recentSearches, ...wishlistSelections];
+
             const SAMPLE_BOTTLES = [
                 "Château Lafite Rothschild 2015",
                 "Opus One 2016",
@@ -111,7 +112,7 @@ const HomeScreen = () => {
                 "Cloudy Bay Sauvignon Blanc 2020"
             ];
 
-            const recRes = await axios.post(`${host}/api/recommend`, { selectedBottles });
+            const recRes = await axios.post(`${host}/api/recommend`, { selectedBottles: SAMPLE_BOTTLES });
             const recommendations = recRes.data.recommendations || [];
             await AsyncStorage.setItem('wineRecommendations', JSON.stringify(recommendations));
         } catch (error) {
@@ -119,7 +120,32 @@ const HomeScreen = () => {
         }
     };
 
-  
+    const fetchCountries = async () => {
+        try {
+            const response = await axios.get(`${host}/region`);
+            setCountries(response.data);
+        } catch (error) {
+            console.error("Error fetching countries:", error);
+        }
+    };
+
+    const fetchWineTypes = async () => {
+        try {
+            const response = await axios.get(`${host}/winetype`);
+            setWineTypes(response.data);
+        } catch (error) {
+            console.error("Error fetching wine types:", error);
+        }
+    };
+
+    const fetchGrapeTypes = async () => {
+        try {
+            const response = await axios.get(`${host}/grapetype`);
+            setGrapeTypes(response.data);
+        } catch (error) {
+            console.error("Error fetching grape types:", error);
+        }
+    };
     const fetchTrending = async () => {
         try {
             const response = await axios.get(`${host}/bottle/trending`);
@@ -168,6 +194,14 @@ const HomeScreen = () => {
         console.log("Bottle selected:", bottleId);
     };
 
+    const handleprofile = () => {
+        if (!user) {
+            setShowLoginModal(true);
+            return;
+        }
+        navigation.navigate('Profile')
+    }
+
     return (
         <ScrollView style={styles.container}>
             {/* <View style={styles.searchBox}>
@@ -195,21 +229,21 @@ const HomeScreen = () => {
                     <TouchableOpacity onPress={() => navigation.navigate('Search')}>
                         <Ionicons name="search" size={24} color="gray" style={{ marginRight: 15 }} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                    <TouchableOpacity onPress={handleprofile}>
                         <Ionicons name="person-circle" size={28} color="gray" />
                     </TouchableOpacity>
                 </View>
             </View>
 
-
-            {/* <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
+            {/* 
+            <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
                 <Ionicons name="filter" size={18} />
                 <Text style={styles.filterText}>Toggle Filters</Text>
             </TouchableOpacity> */}
 
             {showFilters && (
                 <View style={styles.filterContainer}>
-                   
+                    {/* Country Filter */}
                     <Text style={styles.filterLabel}>Country</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         {["", ...countries.map(c => c.country)].map((country) => (
@@ -223,7 +257,7 @@ const HomeScreen = () => {
                         ))}
                     </ScrollView>
 
-                 
+                    {/* Wine Type Filter */}
                     <Text style={styles.filterLabel}>Wine Type</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         {["", ...wineTypes.map(w => w.name)].map((type) => (
@@ -237,7 +271,7 @@ const HomeScreen = () => {
                         ))}
                     </ScrollView>
 
-                   
+                    {/* Grape Type Filter */}
                     <Text style={styles.filterLabel}>Grape Type</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         {["", ...grapeTypes.map(g => g.name)].map((type) => (
@@ -251,7 +285,7 @@ const HomeScreen = () => {
                         ))}
                     </ScrollView>
                 </View>
-            )} 
+            )}
 
             {/* Trending Section */}
             <Text style={[styles.filterLabel, { marginTop: 20 }]}>Trending Wines</Text>
@@ -273,6 +307,7 @@ const HomeScreen = () => {
                     </TouchableOpacity>
                 ))}
             </View>
+            <LoginPrompt visible={showLoginModal} onClose={() => setShowLoginModal(false)} />
 
         </ScrollView>
     );
