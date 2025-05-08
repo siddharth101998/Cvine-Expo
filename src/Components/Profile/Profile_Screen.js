@@ -153,7 +153,7 @@ const ProfileScreen = () => {
         <TouchableOpacity
           style={styles.settingsIcon}
           onPress={() => {
-            // Add settings action here
+            navigation.navigate('ProfileSetting');
           }}
         >
           <Ionicons name="settings-outline" size={28} color="#fff" />
@@ -221,32 +221,43 @@ const ProfileScreen = () => {
       </View>
 
       {/* Tab Content */}
-      {/* Scrollable content below */}
-  <ScrollView style={styles.scrollableContent} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}>
-    {activeTab === 'wishlist' ? (
-      wishlistBottles.map((item, idx) => (
-        <TouchableOpacity
-          key={item._id ?? idx.toString()}
-          style={styles.listItem}
-          onPress={() => navigation.navigate('Bottle', { id: item._id })}
-        >
-          <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
-          <Text style={styles.listText}>{item.name}</Text>
-        </TouchableOpacity>
-      ))
-    ) : (
-      searchHistory.map((item, idx) => (
-        <TouchableOpacity
-          key={item._id ?? idx.toString()}
-          style={styles.listItem}
-          onPress={() => navigation.navigate('Bottle', { id: item.bottle._id })}
-        >
-          <Image source={{ uri: item.bottle.imageUrl }} style={styles.cardImage} />
-          <Text style={styles.listText}>{item.bottle.name}</Text>
-        </TouchableOpacity>
-      ))
-    )}
-  </ScrollView>
+      <View style={styles.tabContent}>
+        {activeTab === 'wishlist' ? (
+          <ScrollView
+            style={styles.scrollableContainer}
+            contentContainerStyle={{ paddingBottom: 16 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {wishlistBottles.map((item, idx) => (
+              <TouchableOpacity
+                key={item._id ?? idx.toString()}
+                style={styles.listItem}
+                onPress={() => navigation.navigate('Bottle', { id: item._id })}
+              >
+                <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+                <Text style={styles.listText}>{item.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <ScrollView
+            style={styles.scrollableContainer}
+            contentContainerStyle={{ paddingBottom: 16 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {searchHistory.map((item, idx) => (
+              <TouchableOpacity
+                key={item._id ?? idx.toString()}
+                style={styles.listItem}
+                onPress={() => navigation.navigate('Bottle', { id: item.bottle._id })}
+              >
+                <Image source={{ uri: item.bottle.imageUrl }} style={styles.cardImage} />
+                <Text style={styles.listText}>{item.bottle.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+      </View>
     </View>
   );
 };
@@ -259,7 +270,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f5fa',
   },
   gradientHeader: {
-    height: 250,
+    height: 350,
     justifyContent: 'center',
     alignItems: 'center',
     borderBottomLeftRadius: 24,
@@ -268,12 +279,12 @@ const styles = StyleSheet.create({
   },
   settingsIcon: {
     position: 'absolute',
-    top: 40,
+    top: 60,
     right: 16,
   },
   avatarContainer: {
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 100,
   },
   avatarLarge: {
     width: 100,
@@ -334,22 +345,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
-  tabContent: {
-    flex: 1, // Take up the remaining space below the header
-    marginTop: 16,
-    marginHorizontal: 16,
-  },
-  scrollableContainer: {
-    flex: 1, // Ensure the ScrollView container takes up the full height
-  },
-  scrollableTab: {
-    flexGrow: 1, // Allow the content to grow and scroll
-  },
-  scrollableContent: {
-    flex: 1,
-    marginTop: 16,
-  },
-  
   tabContainer: {
     flexDirection: 'row',
     marginHorizontal: 16,

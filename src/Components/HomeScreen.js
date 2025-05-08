@@ -16,6 +16,7 @@ import debounce from 'lodash.debounce';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import logo from '../../assets/logo.png';
+import { logoutUser } from '../../authservice';
 
 import { host } from '../API-info/apiifno';
 import { useAuth } from '../authContext/AuthContext';
@@ -92,6 +93,16 @@ const HomeScreen = () => {
             console.error('Error fetching personalized recommendations:', error);
         }
     };
+    const handlelogout = async () => {
+        try {
+            //await logoutUser();
+            updateUser(null);
+            navigation.navigate('Login');
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    }
+
     const fetchGuestRecommendations = async (userId) => {
         try {
 
@@ -195,6 +206,9 @@ const HomeScreen = () => {
                     <TouchableOpacity onPress={() => navigation.navigate('Search')}>
                         <Ionicons name="search" size={24} color="gray" style={{ marginRight: 15 }} />
                     </TouchableOpacity>
+                    <TouchableOpacity onPress={handlelogout}>
+                        <Ionicons name="log-out" size={24} color="gray" style={{ marginRight: 15 }} />
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
                         <Ionicons name="person-circle" size={28} color="gray" />
                     </TouchableOpacity>
@@ -255,7 +269,7 @@ const HomeScreen = () => {
 
             {/* Trending Section */}
             <Text style={[styles.filterLabel, { marginTop: 20 }]}>Trending Wines</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingVertical: 10 }}>
+            <View style={{ flexDirection: 'row' , flexWrap: 'wrap', justifyContent: 'space-between', paddingVertical: 10 }}>
                 {trending.data?.map((item) => (
                     <TouchableOpacity
                         key={item._id}
