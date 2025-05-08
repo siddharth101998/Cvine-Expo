@@ -36,10 +36,14 @@ UIManager.setLayoutAnimationEnabledExperimental(true);
 
 
 // Reusable recipe card with improved layout and tap targets
-const RecipeCard = ({ item, onLike, onSave, onShare, onPress, userId }) => (
+const RecipeCard = ({ item, onLike, onSave, onDislike, onShare, onPress, userId }) => (
   <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={() => onPress(item)}>
     <View style={styles.cardImageContainer}>
-      <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+      {item.imageUrl ? (
+        <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+      ) : (
+        <View style={styles.cardImagePlaceholder} />
+      )}
     </View>
     <View style={styles.cardContent}>
       <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
@@ -49,11 +53,18 @@ const RecipeCard = ({ item, onLike, onSave, onShare, onPress, userId }) => (
       <View style={styles.actionsRow}>
         <TouchableOpacity style={styles.actionButton} onPress={() => onLike(item._id)}>
           <Ionicons
-            name={item.likedusers.includes(userId) ? 'heart' : 'heart-outline'}
+            name={item.likedusers.includes(userId) ? 'thumbs-up' : 'thumbs-up-outline'}
             size={20}
             color={item.likedusers.includes(userId) ? '#e74c3c' : '#777'}
           />
           <Text style={styles.actionText}>{item.likes}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={() => onDislike(item._id)}>
+          <Ionicons
+            name={item.dislikedusers.includes(userId) ? 'thumbs-down' : 'thumbs-down-outline'}
+            size={20}
+            color={item.dislikedusers.includes(userId) ? '#3498db' : '#777'}
+          />
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={() => onSave(item._id)}>
           <Ionicons
@@ -243,19 +254,16 @@ const handleRemoveBottle = (id) => {
   }));
 };
 const handleLike = async (id) => {
+  console.log('handleLike called for recipeId:', id);
   try {
-    await axios.put(`${host}/recipe/like`, {
+    const response = await axios.put(`${host}/recipe/like`, {
       recipeId: id,
       userId: user._id,
     });
-    // setRecipes((prev) =>
-    //   prev.map((r) =>
-    //     r._id === id ? { ...r, likes: r.likes + 1, likedusers: [...r.likedusers, user._id] } : r
-    //   )
-    // );
+    console.log('handleLike response data:', response.data);
     fetchRecipes();
   } catch (error) {
-    console.error(error);
+    console.error('Error liking recipe:', error);
   }
 };
 
@@ -268,6 +276,20 @@ const handleDislike = async (id) => {
     fetchRecipes();
   } catch (error) {
     console.error(error);
+  }
+};
+
+const handleSave = async (id) => {
+  console.log('handleSave called for recipeId:', id);
+  try {
+    const response = await axios.put(`${host}/recipe/save`, {
+      recipeId: id,
+      userId: user._id,
+    });
+    console.log('handleSave response data:', response.data);
+    fetchRecipes();
+  } catch (error) {
+    console.error('Error saving recipe:', error);
   }
 };
 
@@ -334,45 +356,56 @@ const handleShare = (item) => {
   });
 };
 const pickImage = async () => {
-  // Request permission
-  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  // Request camera permissions
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
   if (status !== 'granted') {
-    alert('Permission to access the gallery is required!');
+    alert('Permission to access camera is required!');
     return;
   }
 
-  // Open image picker
-  const result = await ImagePicker.launchImageLibraryAsync({
+  // Launch camera
+  const result = await ImagePicker.launchCameraAsync({
     mediaTypes: ImagePicker.MediaTypeOptions.Images,
     allowsEditing: true,
     aspect: [1, 1],
     quality: 0.7,
   });
 
-  // Check if the user canceled
-  const didCancel = result.cancelled ?? result.canceled;
-  if (!didCancel) {
-    // Get the local URI
-    const uri = result.uri ?? result.assets?.[0]?.uri;
-   
-    // Set the local URI for preview
-    setProfileImageUri(uri);
+  if (result.cancelled || result.canceled) {
+    return;
+  }
 
-    // Upload the image and get the download URL
-    // Note: You might want to handle the case where uri is undefined
-    if (!uri) {
-      console.error('Image URI is undefined');
-      return;
-    }
-    console.log('Uploading image:', uri);
-    const downloadUrl = await uploadAndProcessImage(uri);
-    console.log("Download URL:", downloadUrl);
+  // Get the local URI
+  const uri = result.uri ?? result.assets?.[0]?.uri;
+  if (!uri) {
+    console.error('Image URI is undefined');
+    return;
+  }
 
-    // Save the download URL for backend submission
-    setNewRecipe((prev) => ({
-      ...prev,
-      imageUrl: downloadUrl,
-    }));
+  // Preview
+  setProfileImageUri(uri);
+
+  // Upload to Firebase
+  try {
+    // Convert to Blob
+    const blob = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = () => resolve(xhr.response);
+      xhr.onerror = () => reject(new Error('Failed to convert URI to Blob'));
+      xhr.responseType = 'blob';
+      xhr.open('GET', uri, true);
+      xhr.send(null);
+    });
+    const fileName = uri.split('/').pop();
+    const storageRef = ref(storage, `recipe_images/${Date.now()}-${fileName}`);
+    await uploadBytes(storageRef, blob);
+    const downloadUrl = await getDownloadURL(storageRef);
+    console.log('Image uploaded successfully:', downloadUrl);
+    setNewRecipe(prev => ({ ...prev, imageUrl: downloadUrl }));
+    blob.close();
+  } catch (err) {
+    console.error('Upload error:', err);
+    alert('Upload Failed: ' + (err.message || 'Problem uploading image.'));
   }
 };
 
@@ -414,7 +447,6 @@ const uploadAndProcessImage = async (uri) => {
 };
 
 const renderRecipe = ({ item }) => {
-  
   return (
     <TouchableOpacity
       style={styles.card}
@@ -422,7 +454,11 @@ const renderRecipe = ({ item }) => {
       onPress={() => openModal(item)}
     >
       {/* Recipe Image */}
-      <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+      {item.imageUrl ? (
+        <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+      ) : (
+        <View style={styles.cardImagePlaceholder} />
+      )}
 
       {/* Recipe Details */}
       <View style={styles.cardContent}>
@@ -479,6 +515,7 @@ return (
             item={item}
             onLike={handleLike}
             onSave={handleSave}
+            onDislike={handleDislike}
             onShare={handleShare}
             onPress={openModal}
             userId={user._id}
@@ -617,6 +654,10 @@ return (
     <View style={styles.modalContent}>
       {selectedRecipe && (
         <ScrollView contentContainerStyle={styles.modalScroll}>
+          {/* Show recipe image at top */}
+          {selectedRecipe.imageUrl && (
+            <Image source={{ uri: selectedRecipe.imageUrl }} style={styles.modalImage} />
+          )}
           {/* Header with Back Button */}
           <View style={styles.modalHeader}>
             <TouchableOpacity style={styles.backButton} onPress={closeModal}>
@@ -626,6 +667,32 @@ return (
           </View>
           <View style={styles.divider} />
 
+          {/* Modal actions row: like, dislike, save */}
+          <View style={styles.modalActionsRow}>
+            <TouchableOpacity onPress={() => handleLike(selectedRecipe._id)} style={styles.modalAction}>
+              <Ionicons
+                name={selectedRecipe.likedusers.includes(user._id) ? 'thumbs-up' : 'thumbs-up-outline'}
+                size={24}
+                color={selectedRecipe.likedusers.includes(user._id) ? '#e74c3c' : '#777'}
+              />
+              <Text style={styles.modalActionText}>{selectedRecipe.likes}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleDislike(selectedRecipe._id)} style={styles.modalAction}>
+              <Ionicons
+                name={selectedRecipe.dislikedusers.includes(user._id) ? 'thumbs-down' : 'thumbs-down-outline'}
+                size={24}
+                color={selectedRecipe.dislikedusers.includes(user._id) ? '#3498db' : '#777'}
+              />
+              <Text style={styles.modalActionText}>{selectedRecipe.dislikes}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleSave(selectedRecipe._id)} style={styles.modalAction}>
+              <Ionicons
+                name={selectedRecipe.savedusers?.includes(user._id) ? 'bookmark' : 'bookmark-outline'}
+                size={24}
+                color={selectedRecipe.savedusers?.includes(user._id) ? '#2E8B57' : '#777'}
+              />
+            </TouchableOpacity>
+          </View>
           {/* Recommended Badge */}
           {selectedRecipe.expertRecommendation && (
             <View style={styles.badge}>
@@ -687,9 +754,9 @@ return (
             {comments.length > 0 ? (
               comments.map((comment, index) => (
                 <View key={index} style={styles.commentRow}>
-                  <Text style={styles.commentAuthor}>
-                    {comment.userName || 'Anonymous'}:
-                  </Text>
+                 <Text style={styles.commentAuthor}>
+                    {comment.commenterName || comment.userName || 'Anonymous'}:
+                </Text>
                   <Text style={styles.commentText}>{comment.comment}</Text>
                   {comment.userId === user._id && (
                     <TouchableOpacity onPress={() => handleDeleteComment(comment._id)}>
@@ -798,6 +865,11 @@ const styles = StyleSheet.create({
     height: 120,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
+  },
+  cardImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#ddd',
   },
   cardContent: {
     padding: 12,
@@ -1057,5 +1129,19 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     resizeMode: 'cover',
     marginBottom: 12,
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginVertical: 12,
+  },
+  modalAction: {
+    alignItems: 'center',
+  },
+  modalActionText: {
+    fontSize: 14,
+    color: '#333',
+    marginTop: 4,
   },
 });
