@@ -119,36 +119,11 @@ const HomeScreen = () => {
         }
     };
 
-    const fetchCountries = async () => {
-        try {
-            const response = await axios.get(`${host}/region`);
-            setCountries(response.data);
-        } catch (error) {
-            console.error("Error fetching countries:", error);
-        }
-    };
-
-    const fetchWineTypes = async () => {
-        try {
-            const response = await axios.get(`${host}/winetype`);
-            setWineTypes(response.data);
-        } catch (error) {
-            console.error("Error fetching wine types:", error);
-        }
-    };
-
-    const fetchGrapeTypes = async () => {
-        try {
-            const response = await axios.get(`${host}/grapetype`);
-            setGrapeTypes(response.data);
-        } catch (error) {
-            console.error("Error fetching grape types:", error);
-        }
-    };
+  
     const fetchTrending = async () => {
         try {
             const response = await axios.get(`${host}/bottle/trending`);
-            console.log("resss", response.data)
+            //console.log("resss", response.data)
             setTrending(response.data);
         } catch (error) {
             console.error("Error fetching trending items:", error);
@@ -226,15 +201,15 @@ const HomeScreen = () => {
                 </View>
             </View>
 
-            {/* 
-            <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
+
+            {/* <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
                 <Ionicons name="filter" size={18} />
                 <Text style={styles.filterText}>Toggle Filters</Text>
             </TouchableOpacity> */}
 
             {showFilters && (
                 <View style={styles.filterContainer}>
-                    {/* Country Filter */}
+                   
                     <Text style={styles.filterLabel}>Country</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         {["", ...countries.map(c => c.country)].map((country) => (
@@ -248,7 +223,7 @@ const HomeScreen = () => {
                         ))}
                     </ScrollView>
 
-                    {/* Wine Type Filter */}
+                 
                     <Text style={styles.filterLabel}>Wine Type</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         {["", ...wineTypes.map(w => w.name)].map((type) => (
@@ -262,7 +237,7 @@ const HomeScreen = () => {
                         ))}
                     </ScrollView>
 
-                    {/* Grape Type Filter */}
+                   
                     <Text style={styles.filterLabel}>Grape Type</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         {["", ...grapeTypes.map(g => g.name)].map((type) => (
@@ -276,7 +251,7 @@ const HomeScreen = () => {
                         ))}
                     </ScrollView>
                 </View>
-            )}
+            )} 
 
             {/* Trending Section */}
             <Text style={[styles.filterLabel, { marginTop: 20 }]}>Trending Wines</Text>

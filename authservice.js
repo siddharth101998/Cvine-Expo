@@ -59,21 +59,16 @@ export const registerUser = async (email, password, username, fullName) => {
 
 export const loginUser = async (email, password) => {
     try {
-        // ↓↓ Skip Firebase sign-in
-        // const userCredential = await signInWithEmailAndPassword(
-        //     auth,
-        //     email,
-        //     password
-        // );
-        // const user = userCredential.user;
+     
+        console.log(`${host}/user/login`,email);
 
-        console.log(`${host}/user/login`);
+    
 
         const res = await axios.post(`${host}/user/login`, {
             email,
             password,
         });
-
+        console.log("login res", res.data);
         return res.data.user;
     } catch (error) {
         throw error;

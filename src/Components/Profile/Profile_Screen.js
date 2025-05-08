@@ -15,6 +15,7 @@ const ProfileScreen = () => {
   const [profileImageUri, setProfileImageUri] = useState(user.profileImage || null);
   const [wishlistBottles, setWishlistBottles] = useState([]);
   const [searchHistory, setSearchHistory] = useState([]);
+  const [recipeCount, setRecipeCount] = useState(0);
   const [activeTab, setActiveTab] = useState('wishlist');
   const navigation = useNavigation();
 
@@ -28,7 +29,6 @@ const ProfileScreen = () => {
       console.error("Error fetching wishlist bottles:", error);
     }
   };
-
 
   // const fetchSearchHistory = async () => {
   //   if (!user) return;
@@ -62,11 +62,24 @@ const ProfileScreen = () => {
   //     console.error("Error fetching search history:", error);
   //   }
   // };
+  const fetchRecipeCount = async () => {
+    if (!user) return;
+    try {
+      console.log("user id:", user._id);
+      const res = await axios.get(`http://localhost:5002/recipe/count/${user._id}`);
+      console.log("recipe count response:", res.data);
+      setRecipeCount(res.data.count);
+    } catch (error) {
+      console.error("Error fetching count of recipes :", error);
+    }
+  };
+
   const fetchSearchHistory = async () => {
     if (!user) return;
     try {
       const res = await axios.get(`${host}/searchHistory/${user._id}`);
       console.log("searchhistory response:", res.data.length);
+
       setSearchHistory(res.data);
     } catch (error) {
       console.error("Error fetching search bottles:", error);
@@ -100,6 +113,9 @@ const ProfileScreen = () => {
   };
 
   useEffect(() => {
+    // Fetch user data when the component mounts
+    //fetchUser();
+    fetchRecipeCount();
     fetchWishlist();
     fetchSearchHistory();
   }, [user]);
@@ -119,6 +135,7 @@ const ProfileScreen = () => {
   const badgeDetails = Array.isArray(user.badges) ? user.badges.map(badgeId => {
     // For demonstration, assume badgeId is an object with _id and badgeLogo
     // In case badgeId is just a string, create a placeholder
+    console.log(user.badges);
     if (typeof badgeId === 'object' && badgeId._id && badgeId.badgeLogo) {
       return badgeId;
     }
@@ -127,46 +144,53 @@ const ProfileScreen = () => {
   }) : [];
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.container}>
       {/* Gradient Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => {/* settings action */ }}>
-          <Ionicons name="settings-outline" size={24} color="black" />
+      <LinearGradient
+        colors={['#B22222', '#FF6347']}
+        style={styles.gradientHeader}
+      >
+        <TouchableOpacity
+          style={styles.settingsIcon}
+          onPress={() => {
+            // Add settings action here
+          }}
+        >
+          <Ionicons name="settings-outline" size={28} color="#fff" />
         </TouchableOpacity>
-      </View>
-      {/* Avatar and name */}
-      <View style={styles.avatarContainer}>
-        <TouchableOpacity onPress={pickImage}>
-          {profileImageUri ? (
-            <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
-          ) : (
-            <Ionicons name="person-circle-outline" size={100} color="black" />
-          )}
-        </TouchableOpacity>
-        <Text style={styles.usernameWhite}>{user.username}</Text>
-      </View>
 
-      {/* Stats Row Overlap */}
-      <View style={styles.statsOverlay}>
-        <View style={[styles.statBox, { backgroundColor: '#fff' }]}>
-          <Text style={[styles.statNumber, { color: 'black' }]}>{user.recipeCount}</Text>
-          <Text style={styles.statLabel}>Recipes</Text>
+        {/* Avatar and Username */}
+        <View style={styles.avatarContainer}>
+          <TouchableOpacity onPress={pickImage}>
+            {profileImageUri ? (
+              <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
+            ) : (
+              <Ionicons name="person-circle-outline" size={100} color="#fff" />
+            )}
+          </TouchableOpacity>
+          <Text style={styles.username}>{user.username}</Text>
         </View>
-        <View style={[styles.statBox, { backgroundColor: '#fff' }]}>
-          <Text style={[styles.statNumber, { color: 'black' }]}>{badgeDetails.length}</Text>
-          <Text style={styles.statLabel}>Badges</Text>
-        </View>
-      </View>
 
-      {/* Badges */}
+        {/* Stats Section */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statBox}>
+            <Ionicons name="book-outline" size={24} color="#fff" />
+            <Text style={styles.statNumber}>{recipeCount}</Text>
+            <Text style={styles.statLabel}>Recipes</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Ionicons name="ribbon-outline" size={24} color="#fff" />
+            <Text style={styles.statNumber}>{badgeDetails.length}</Text>
+            <Text style={styles.statLabel}>Badges</Text>
+          </View>
+        </View>
+      </LinearGradient>
+
+      {/* Badges Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Badges</Text>
         <View style={styles.badgesList}>
-          {badgeDetails.map(badge => (
+          {badgeDetails.map((badge) => (
             <Image
               key={badge._id}
               source={{ uri: badge.badgeLogo }}
@@ -176,7 +200,7 @@ const ProfileScreen = () => {
         </View>
       </View>
 
-      {/* Tab Selector */}
+      {/* Tabs Section */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'wishlist' && styles.activeTab]}
@@ -197,150 +221,135 @@ const ProfileScreen = () => {
       </View>
 
       {/* Tab Content */}
-      {activeTab === 'wishlist' ? (
-        wishlistBottles.map((item, idx) => (
-
-          <TouchableOpacity
-            key={item._id ?? idx.toString()}
-            style={styles.listItem}
-            onPress={() => navigation.navigate('Bottle', { id: item._id })}
-          >
-            <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
-            <Text style={styles.listText}>{item.name}</Text>
-          </TouchableOpacity>
-        ))
-      ) : (
-        <View style={styles.section}>
-          {searchHistory.map((item, idx) => (
-
-            <TouchableOpacity
-              key={item._id ?? idx.toString()}
-              style={styles.listItem}
-              onPress={() => navigation.navigate('Bottle', { id: item.bottle._id })}
-
-            >
-              <Image source={{ uri: item.bottle.imageUrl }} style={styles.cardImage} />
-              <Text style={styles.listText}>{item.bottle.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-    </ScrollView>
+      {/* Scrollable content below */}
+  <ScrollView style={styles.scrollableContent} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}>
+    {activeTab === 'wishlist' ? (
+      wishlistBottles.map((item, idx) => (
+        <TouchableOpacity
+          key={item._id ?? idx.toString()}
+          style={styles.listItem}
+          onPress={() => navigation.navigate('Bottle', { id: item._id })}
+        >
+          <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+          <Text style={styles.listText}>{item.name}</Text>
+        </TouchableOpacity>
+      ))
+    ) : (
+      searchHistory.map((item, idx) => (
+        <TouchableOpacity
+          key={item._id ?? idx.toString()}
+          style={styles.listItem}
+          onPress={() => navigation.navigate('Bottle', { id: item.bottle._id })}
+        >
+          <Image source={{ uri: item.bottle.imageUrl }} style={styles.cardImage} />
+          <Text style={styles.listText}>{item.bottle.name}</Text>
+        </TouchableOpacity>
+      ))
+    )}
+  </ScrollView>
+    </View>
   );
 };
 
 export default ProfileScreen;
 
 const styles = StyleSheet.create({
-  screen: {
+  container: {
     flex: 1,
     backgroundColor: '#f4f5fa',
-    top: 5,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginTop: 50,
-    width: '100%',
   },
   gradientHeader: {
-    height: 220,
-    paddingTop: 50,
-    paddingHorizontal: 16,
+    height: 250,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
+    paddingHorizontal: 16,
+  },
+  settingsIcon: {
+    position: 'absolute',
+    top: 40,
+    right: 16,
   },
   avatarContainer: {
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 20,
   },
   avatarLarge: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    marginBottom: 16,
+    borderWidth: 3,
+    borderColor: '#fff',
+    marginBottom: 12,
   },
-  usernameWhite: {
-    marginTop: 12,
+  username: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: 'Black',
+    color: '#fff',
+    marginTop: 8,
   },
-  statsOverlay: {
+  statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 22,
+    marginTop: 16,
+    width: '100%',
   },
   statBox: {
-    flex: 1,
     alignItems: 'center',
-    paddingVertical: 16,
-    marginHorizontal: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 16,
     borderRadius: 12,
-    // shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    width: '40%',
   },
   statNumber: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#5b3dff',
+    color: '#fff',
+    marginTop: 8,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+    fontSize: 14,
+    color: '#fff',
   },
   section: {
     marginTop: 24,
     marginHorizontal: 16,
-    paddingHorizontal: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: 'black',
+    color: '#333',
     marginBottom: 12,
-    paddingBottom: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   badgesList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'flex-start',
   },
   badgeLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     marginRight: 8,
     marginBottom: 8,
   },
-  listItem: {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    // subtle card style
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+  tabContent: {
+    flex: 1, // Take up the remaining space below the header
+    marginTop: 16,
+    marginHorizontal: 16,
   },
-  listText: {
-    fontSize: 16,
-    color: '#333',
+  scrollableContainer: {
+    flex: 1, // Ensure the ScrollView container takes up the full height
   },
+  scrollableTab: {
+    flexGrow: 1, // Allow the content to grow and scroll
+  },
+  scrollableContent: {
+    flex: 1,
+    marginTop: 16,
+  },
+  
   tabContainer: {
     flexDirection: 'row',
     marginHorizontal: 16,
@@ -355,7 +364,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeTab: {
-    backgroundColor: '#5b3dff',
+    backgroundColor: '#B22222',
   },
   tabText: {
     fontSize: 16,
@@ -365,17 +374,35 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#e0e0e0',
+  tabContent: {
+    flex: 1,
+    marginTop: 16,
     marginHorizontal: 16,
-    marginVertical: 16,
+  },
+  scrollableContainer: {
+    flex: 1,
+  },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   cardImage: {
-    width: 40,
-    height: 40,
+    width: 50,
+    height: 50,
     borderRadius: 8,
     marginRight: 12,
-    objectFit: 'contain'
+  },
+  listText: {
+    fontSize: 16,
+    color: '#333',
   },
 });

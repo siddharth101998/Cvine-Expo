@@ -9,6 +9,7 @@ import RegisterScreen from './src/Components/Register';
 import HomeScreen from './src/Components/HomeScreen';
 import ScanScreen from './src/Components/Scan';
 import BottlePage from './src/Components/BottlePage';
+import UserRecipes from './src/Components/UserRecipes';
 import RecipePage from './src/Components/Recipe';
 import Recommendation from './src/Components/Recommendation';
 import { AuthProvider } from './src/authContext/AuthContext';
@@ -64,6 +65,9 @@ export default function App() {
           </Stack.Screen>
           <Stack.Screen name="Search" options={{ headerShown: false }}>
             {() => <ScreenWithNavbar><SearchPage /></ScreenWithNavbar>}
+          </Stack.Screen>
+          <Stack.Screen name="UserRecipes" options={{ headerShown: false }}>
+            {() => <ScreenWithNavbar><UserRecipes /></ScreenWithNavbar>}
           </Stack.Screen>
           <Stack.Screen name="Profile" options={{ headerShown: false }}>
             {() => (<ScreenWithNavbar><ProfileScreen /></ScreenWithNavbar>)}
