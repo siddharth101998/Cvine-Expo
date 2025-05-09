@@ -18,6 +18,7 @@ import {
   Modal,
   TextInput,
   Alert, // <--- add this
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { storage } from '../../firebase';
@@ -38,10 +39,10 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 // Reusable recipe card with improved layout and tap targets
 const RecipeCard = ({ item, onLike, onSave, onDislike, onShare, onPress, userId }) => (
-  <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={() => onPress(item)}>
-    <View style={styles.cardImageContainer}>
+  <TouchableOpacity style={[styles.card, styles.horizontalCard]} activeOpacity={0.9} onPress={() => onPress(item)}>
+    <View style={styles.cardImageContainerHorizontal}>
       {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+        <Image source={{ uri: item.imageUrl }} style={styles.cardImageHorizontal} />
       ) : (
         <View style={styles.cardImagePlaceholder} />
       )}
@@ -84,6 +85,7 @@ const RecipeCard = ({ item, onLike, onSave, onDislike, onShare, onPress, userId 
 );
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export const RecipePage = () => {
   const { user } = useAuth();
@@ -286,6 +288,10 @@ export const RecipePage = () => {
         userId: user._id,
       });
       console.log('handleLike response data:', response.data);
+      // Update modal immediately if open
+      if (selectedRecipe?._id === id) {
+        setSelectedRecipe(response.data);
+      }
       fetchRecipes();
     } catch (error) {
       console.error('Error liking recipe:', error);
@@ -294,13 +300,17 @@ export const RecipePage = () => {
 
   const handleDislike = async (id) => {
     try {
-      await axios.put(`${host}/recipe/dislike`, {
+      const response = await axios.put(`${host}/recipe/dislike`, {
         recipeId: id,
         userId: user._id,
       });
+      // Update modal immediately if open
+      if (selectedRecipe?._id === id) {
+        setSelectedRecipe(response.data);
+      }
       fetchRecipes();
     } catch (error) {
-      console.error(error);
+      console.error('Error disliking recipe:', error);
     }
   };
 
@@ -312,6 +322,10 @@ export const RecipePage = () => {
         userId: user._id,
       });
       console.log('handleSave response data:', response.data);
+      // Update modal immediately if open
+      if (selectedRecipe?._id === id) {
+        setSelectedRecipe(response.data);
+      }
       fetchRecipes();
     } catch (error) {
       console.error('Error saving recipe:', error);
@@ -572,7 +586,6 @@ export const RecipePage = () => {
         transparent={true}
         onRequestClose={() => setShowAddRecipe(false)}
       >
-
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -711,7 +724,6 @@ export const RecipePage = () => {
             </ScrollView>
           </View>
         </View>
-
       </Modal>
       <Modal
         visible={modalVisible}
@@ -830,7 +842,7 @@ export const RecipePage = () => {
                     <Ionicons
                       name={selectedRecipe.likedusers.includes(user._id) ? 'thumbs-up' : 'thumbs-up-outline'}
                       size={24}
-                      color={selectedRecipe.likedusers.includes(user._id) ? '#e74c3c' : '#777'}
+                      color={selectedRecipe.likedusers.includes(user._id) ? '#2E8B57' : '#777'}
                     />
                     <Text style={styles.modalActionText}>{selectedRecipe.likes}</Text>
                   </TouchableOpacity>
@@ -838,7 +850,7 @@ export const RecipePage = () => {
                     <Ionicons
                       name={selectedRecipe.dislikedusers.includes(user._id) ? 'thumbs-down' : 'thumbs-down-outline'}
                       size={24}
-                      color={selectedRecipe.dislikedusers.includes(user._id) ? '#3498db' : '#777'}
+                      color={selectedRecipe.dislikedusers.includes(user._id) ? '#e74c3c' : '#777'}
                     />
                     <Text style={styles.modalActionText}>{selectedRecipe.dislikes}</Text>
                   </TouchableOpacity>
@@ -881,16 +893,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f5fa',
   },
   header: {
-    height: 150,
-    justifyContent: 'center',
+    paddingTop: 50,
+    paddingBottom: 20,
+    backgroundColor: '#B22222',
     alignItems: 'center',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
+
   },
   headerText: {
     color: '#fff',
     fontSize: 24,
     fontWeight: 'bold',
+    marginTop: 20,
   },
   createButton: {
     backgroundColor: '#B22222',
@@ -955,6 +970,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  horizontalCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardImageContainerHorizontal: {
+    width: 100,
+    height: 100,
+    backgroundColor: '#eee',
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+    overflow: 'hidden',
+  },
+  cardImageHorizontal: {
+    width: '100%',
+    height: '100%',
+  },
+  cardContent: {
+    flex: 1,
+    padding: 12,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -963,6 +998,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '90%',
+    maxHeight: SCREEN_HEIGHT * 0.8,
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,

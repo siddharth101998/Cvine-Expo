@@ -10,6 +10,8 @@ const API_BASE_URL = 'http://localhost:5002';
 
 export default function UserRecipes( ) {
     const [userRecipes, setUserRecipes] = useState([]);
+    const [savedRecipes, setSavedRecipes] = useState([]);
+    const [activeTab, setActiveTab] = useState('my'); // 'my' or 'saved'
     const [loading, setLoading] = useState(true);
     const [selectedRecipe, setSelectedRecipe] = useState(null);
     const [isModalVisible, setIsModalVisible] = useState(false);
@@ -29,6 +31,21 @@ export default function UserRecipes( ) {
         };
 
         fetchUserRecipes();
+    }, [user._id]);
+
+    useEffect(() => {
+      const fetchSaved = async () => {
+        setLoading(true);
+        try {
+          const res = await axios.get(`${API_BASE_URL}/recipe/saved/${user._id}`);
+          setSavedRecipes(res.data);
+        } catch (err) {
+          console.error('Error fetching saved recipes:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchSaved();
     }, [user._id]);
 
     const handleEditRecipe = async () => {
@@ -63,12 +80,23 @@ export default function UserRecipes( ) {
 
     return (
         <View style={styles.container}> 
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Profile')}>
-                <Ionicons name="arrow-back" size={24} color="black" />
-                <Text style={styles.backButtonText}>Back</Text>
+          <View style={styles.tabBar}>
+            <TouchableOpacity
+              style={[styles.tabButton, activeTab === 'my' && styles.tabButtonActive]}
+              onPress={() => setActiveTab('my')}
+            >
+                
+              <Text style={[styles.tabText, activeTab === 'my' && styles.tabTextActive]}>My Recipes</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabButton, activeTab === 'saved' && styles.tabButtonActive]}
+              onPress={() => setActiveTab('saved')}
+            >
+              <Text style={[styles.tabText, activeTab === 'saved' && styles.tabTextActive]}>Saved Recipes</Text>
+            </TouchableOpacity>
+          </View>
             <FlatList
-                data={userRecipes}
+                data={activeTab === 'my' ? userRecipes : savedRecipes}
                 keyExtractor={(item) => item._id}
                 renderItem={({ item }) => (
                     <View style={styles.card}>
@@ -81,20 +109,22 @@ export default function UserRecipes( ) {
                         ))}
                         <Text style={styles.recipeDescription}>Method:</Text>
                         <Text style={styles.methodText}>{item.method}</Text>
-                        <View style={styles.cardButtons}>
+                        {activeTab === 'my' && (
+                          <View style={styles.cardButtons}>
                             <Button
-                                title="Edit"
-                                onPress={() => {
-                                    setSelectedRecipe(item);
-                                    setIsModalVisible(true);
-                                }}
+                              title="Edit"
+                              onPress={() => {
+                                setSelectedRecipe(item);
+                                setIsModalVisible(true);
+                              }}
                             />
                             <Button
-                                title="Delete"
-                                onPress={() => handleDeleteRecipe(item._id)}
-                                color="red"
+                              title="Delete"
+                              onPress={() => handleDeleteRecipe(item._id)}
+                              color="red"
                             />
-                        </View>
+                          </View>
+                        )}
                     </View>
                 )}
             />
@@ -251,5 +281,28 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginTop: 20,
+    },
+    tabBar: {
+      flexDirection: 'row',
+      marginBottom: 10,
+    },
+    tabButton: {
+      flex: 1,
+      paddingVertical: 8,
+      backgroundColor: '#eee',
+      alignItems: 'center',
+      borderRadius: 4,
+      marginHorizontal: 4,
+    },
+    tabButtonActive: {
+      backgroundColor: '#B22222',
+    },
+    tabText: {
+      fontSize: 16,
+      color: '#333',
+    },
+    tabTextActive: {
+      color: '#fff',
+      fontWeight: 'bold',
     },
 });

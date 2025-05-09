@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../authContext/AuthContext';
 import axios from 'axios';
@@ -10,101 +9,134 @@ import { useNavigation } from '@react-navigation/native';
 const ProfileSetting = () => {
     const navigation = useNavigation();
   const { user, updateUser } = useAuth();
-  const [profileImageUri, setProfileImageUri] = useState(user.profileImage || null);
-  const [name, setName] = useState(user.username || '');
-  const [password, setPassword] = useState('');
-  const [retypePassword, setRetypePassword] = useState('');
+  const [showPassModal, setShowPassModal] = useState(false);
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [newUsername, setNewUsername] = useState(user.username || '');
 
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Permission to access gallery is required!');
+  const handlePasswordSave = async () => {
+    if (!newPassword || newPassword !== confirmPassword) {
+      Alert.alert('Error', 'Passwords must match and not be empty.');
       return;
     }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-
-    if (!result.canceled) {
-      const uri = result.uri ?? result.assets?.[0]?.uri;
-      setProfileImageUri(uri);
+    try {
+      const res = await axios.put(`${host}/user/${user._id}`, { password: newPassword });
+      updateUser(res.data.data);
+      Alert.alert('Success', 'Password updated.');
+      setShowPassModal(false);
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'Failed to update password.');
     }
   };
 
-  const handleSave = async () => {
-    if (password && password !== retypePassword) {
-      Alert.alert('Error', 'Passwords do not match.');
+  const handleUsernameSave = async () => {
+    if (!newUsername.trim()) {
+      Alert.alert('Error', 'Username cannot be empty.');
       return;
     }
-
     try {
-      const payload = {
-        username: name,
-        profileImage: profileImageUri,
-        ...(password && { password }),
-      };
-      console.log('Payload to update:', payload);
-      // Update user on the backend
-      const res = await axios.put(`${host}/user/${user._id}`, payload);
-      console.log('User updated:', res.data);
-
-      // Update user in context
-      updateUser(res.data);
-
-      Alert.alert('Success', 'Profile updated successfully.');
-      navigation.goBack();
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
+      const res = await axios.put(`${host}/user/${user._id}`, { username: newUsername.trim() });
+      updateUser(res.data.data);
+      Alert.alert('Success', 'Username updated.');
+      setShowUsernameModal(false);
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'Failed to update username.');
     }
+  };
+
+  const handleLogout = () => {
+    updateUser(null);
+    navigation.replace('Login');
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Edit Profile</Text>
 
-      {/* Profile Picture */}
-      <TouchableOpacity onPress={pickImage} style={styles.imagePicker}>
-        {profileImageUri ? (
-          <Image source={{ uri: profileImageUri }} style={styles.profileImage} />
-        ) : (
-          <Ionicons name="person-circle-outline" size={100} color="#B22222" />
-        )}
-      </TouchableOpacity>
-      <Text style={styles.label}>Tap to change profile picture</Text>
+      <View style={styles.buttonGroup}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => setShowPassModal(true)}>
+          <Ionicons name="lock-closed-outline" size={20} color="#B22222" />
+          <Text style={styles.actionText}>Change Password</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={() => setShowUsernameModal(true)}>
+          <Ionicons name="person-outline" size={20} color="#B22222" />
+          <Text style={styles.actionText}>Change Username</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={20} color="#B22222" />
+          <Text style={styles.actionText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
 
-      {/* Name Input */}
-      <TextInput
-        style={styles.input}
-        placeholder="Name"
-        value={name}
-        onChangeText={setName}
-      />
+      {/* Change Password Modal */}
+      <Modal transparent animationType="slide" visible={showPassModal}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 20}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>Change Password</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="New Password"
+                secureTextEntry
+                value={newPassword}
+                onChangeText={setNewPassword}
+              />
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Confirm Password"
+                secureTextEntry
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+              <View style={styles.modalActions}>
+                <TouchableOpacity onPress={() => setShowPassModal(false)} style={styles.modalBtn}>
+                  <Text>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handlePasswordSave} style={styles.modalBtn}>
+                  <Text>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </Modal>
 
-      {/* Password Input */}
-      <TextInput
-        style={styles.input}
-        placeholder="New Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Retype Password"
-        secureTextEntry
-        value={retypePassword}
-        onChangeText={setRetypePassword}
-      />
-
-      {/* Save Button */}
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Save Changes</Text>
-      </TouchableOpacity>
+      {/* Change Username Modal */}
+      <Modal transparent animationType="slide" visible={showUsernameModal}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 20}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>Change Username</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="New Username"
+                value={newUsername}
+                onChangeText={setNewUsername}
+              />
+              <View style={styles.modalActions}>
+                <TouchableOpacity onPress={() => setShowUsernameModal(false)} style={styles.modalBtn}>
+                  <Text>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleUsernameSave} style={styles.modalBtn}>
+                  <Text>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 };
@@ -114,7 +146,8 @@ export default ProfileSetting;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    paddingTop: 20,
+    paddingHorizontal: 16,
     backgroundColor: '#f4f5fa',
   },
   title: {
@@ -124,40 +157,54 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: 'center',
   },
-  imagePicker: {
+  buttonGroup: {
+    marginTop: 72,
+  },
+  actionButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: '#B22222',
-  },
-  label: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  input: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     backgroundColor: '#fff',
-    padding: 12,
     borderRadius: 8,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#ddd',
-    marginBottom: 16,
   },
-  saveButton: {
-    backgroundColor: '#B22222',
-    padding: 16,
-    borderRadius: 8,
+  actionText: {
+    fontSize: 16,
+    marginLeft: 12,
+    color: '#333',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
+  modalBox: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 16,
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  modalInput: {
+    backgroundColor: '#f0f0f0',
+    padding: 8,
+    borderRadius: 4,
+    marginBottom: 12,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  modalBtn: {
+    marginLeft: 16,
   },
 });

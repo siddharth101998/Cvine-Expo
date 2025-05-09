@@ -1,11 +1,17 @@
 // src/Components/Profile/ProfileScreen.js
 import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, Animated } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, Animated, FlatList, Dimensions, TouchableOpacity } from 'react-native';
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const ITEM_WIDTH = SCREEN_WIDTH / 2 - 24;
+const ITEM_HEIGHT = ITEM_WIDTH * 1.6;
+const formatDate = iso => {
+  const d = new Date(iso);
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+};
 import { useAuth } from '../../authContext/AuthContext';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
-import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -80,7 +86,13 @@ const ProfileScreen = () => {
       const res = await axios.get(`${host}/searchHistory/${user._id}`);
       console.log("searchhistory response:", res.data.length);
 
-      setSearchHistory(res.data);
+      // Sort search history so newest items appear first
+      const sortedHistory = res.data.sort((a, b) => {
+        const dateA = new Date(b.createdAt || b.createdat);
+        const dateB = new Date(a.createdAt || a.createdat);
+        return dateA - dateB;
+      });
+      setSearchHistory(sortedHistory);
     } catch (error) {
       console.error("Error fetching search bottles:", error);
     }
@@ -153,30 +165,31 @@ const ProfileScreen = () => {
         <TouchableOpacity style={styles.settingsIcon} onPress={() => navigation.navigate('ProfileSetting')}>
           <Ionicons name="settings-outline" size={28} color="#fff" />
         </TouchableOpacity>
-
-        {/* Avatar and Username */}
-        <View style={styles.avatarContainer}>
-          <TouchableOpacity onPress={pickImage}>
-            {profileImageUri ? (
-              <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
-            ) : (
-              <Ionicons name="person-circle-outline" size={100} color="#fff" />
-            )}
-          </TouchableOpacity>
-          <Text style={styles.username}>{user.username}</Text>
-        </View>
-
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statBox}>
-            <Ionicons name="book-outline" size={24} color="#fff" />
-            <Text style={styles.statNumber}>{recipeCount}</Text>
-            <Text style={styles.statLabel}>Recipes</Text>
+        <View style={styles.headerContent}>
+          <View style={styles.avatarContainer}>
+            <TouchableOpacity onPress={pickImage}>
+              {profileImageUri ? (
+                <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
+              ) : (
+                <Ionicons name="person-circle-outline" size={100} color="#fff" />
+              )}
+            </TouchableOpacity>
+            <Text style={styles.username}>{user.username}</Text>
           </View>
-          <View style={styles.statBox}>
-            <Ionicons name="ribbon-outline" size={24} color="#fff" />
-            <Text style={styles.statNumber}>{badgeDetails.length}</Text>
-            <Text style={styles.statLabel}>Badges</Text>
+          <View style={styles.statsContainer}>
+            <TouchableOpacity
+              style={styles.statBox}
+              onPress={() => navigation.navigate('UserRecipes', { userId: user._id })}
+            >
+              <Ionicons name="restaurant-outline" size={24} color="#fff" />
+              <Text style={styles.statNumber}>{recipeCount}</Text>
+              <Text style={styles.statLabel}>Recipes</Text>
+            </TouchableOpacity>
+            <View style={styles.statBox}>
+              <Ionicons name="ribbon-outline" size={24} color="#fff" />
+              <Text style={styles.statNumber}>{badgeDetails.length}</Text>
+              <Text style={styles.statLabel}>Badges</Text>
+            </View>
           </View>
         </View>
       </LinearGradient>
@@ -207,23 +220,40 @@ const ProfileScreen = () => {
       </View>
 
       {/* Only Scroll This Area */}
-      <ScrollView style={styles.scrollList} contentContainerStyle={{ paddingBottom: 100 }}>
-        <View style={styles.tabContent}>
-          {(activeTab === 'wishlist' ? wishlistBottles : searchHistory).map((item, idx) => {
-            const bottle = activeTab === 'wishlist' ? item : item.bottle;
+      <View style={styles.listWrapper}>
+        <FlatList
+          data={activeTab === 'wishlist' ? wishlistBottles : searchHistory}
+          horizontal
+          pagingEnabled
+          snapToInterval={ITEM_WIDTH + 24}
+          decelerationRate="fast"
+          keyExtractor={(item, idx) => item._id || idx.toString()}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalList}
+          renderItem={({ item }) => {
+            // Determine name and timestamp fields
+            const name = activeTab === 'wishlist'
+              ? item.name
+              : item.bottle?.name || item.name;
+
+            // Use Mongoose timestamps (createdAt), fallback to legacy field
+            const date = item.createdAt || item.createdat;
             return (
-              <TouchableOpacity
-                key={idx}
-                style={styles.listItem}
-                onPress={() => navigation.navigate('Bottle', { id: bottle._id })}
-              >
-                <Image source={{ uri: bottle.imageUrl }} style={styles.cardImage} />
-                <Text style={styles.listText}>{bottle.name}</Text>
-              </TouchableOpacity>
+              <View style={styles.cardItem}>
+                <Image
+                  source={{ uri: item.imageUrl || item.bottle?.imageUrl }}
+                  style={styles.cardImage}
+                  resizeMode="contain"
+                />
+                <Text style={styles.listText} numberOfLines={2}>{name}</Text>
+                {activeTab === 'search' && date && (
+                  <Text style={styles.timeText}>{formatDate(date)}</Text>
+                )}
+              </View>
             );
-          })}
-        </View>
-      </ScrollView>
+          }}
+        />
+      </View>
 
 
     </View>
@@ -236,15 +266,18 @@ export default ProfileScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f5fa',
+    // backgroundColor: '#fcf8f5',
+
   },
   gradientHeader: {
-    height: 350,
+    height: 235,
     justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#B22222',
+    alignItems: 'flex-start',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     paddingHorizontal: 16,
+    paddingTop: 50,
   },
   settingsIcon: {
     position: 'absolute',
@@ -252,35 +285,44 @@ const styles = StyleSheet.create({
     right: 16,
   },
   avatarContainer: {
+    flexDirection: 'column',
     alignItems: 'center',
-    marginTop: 100,
+    marginTop: 0,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 10,
+    marginTop: 0,
   },
   avatarLarge: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     borderWidth: 3,
     borderColor: '#fff',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   username: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
-    marginTop: 8,
+    marginTop: 4,
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 16,
-    width: '100%',
+    marginTop: 0,
+    width: '60%',
   },
   statBox: {
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 16,
+    padding: 8,
     borderRadius: 12,
-    width: '40%',
+    width: '45%',
   },
   statNumber: {
     fontSize: 20,
@@ -349,7 +391,6 @@ const styles = StyleSheet.create({
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
@@ -360,14 +401,31 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   cardImage: {
-    width: 50,
-    height: 50,
+    width: ITEM_WIDTH,
+    height: ITEM_HEIGHT,
     borderRadius: 8,
-    marginRight: 12,
-    objectFit: 'contain'
+    marginBottom: 8,
   },
   listText: {
     fontSize: 16,
-    color: '#333',
+    textAlign: 'center',
+  },
+  listWrapper: {
+    marginTop: 50,
+    paddingVertical: 16,
+  },
+  horizontalList: {
+    paddingLeft: 16,
+  },
+  cardItem: {
+    width: ITEM_WIDTH,
+    marginRight: 24,
+    alignItems: 'center',
+    minHeight: ITEM_HEIGHT + 60,
+  },
+  timeText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
   },
 });
