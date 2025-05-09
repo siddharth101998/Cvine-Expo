@@ -192,9 +192,9 @@ const HomeScreen = () => {
                     <TouchableOpacity onPress={() => navigation.navigate('Search')}>
                         <Ionicons name="search" size={24} color="gray" style={{ marginRight: 15 }} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={handlelogout}>
+                    {/* <TouchableOpacity onPress={handlelogout}>
                         <Ionicons name="log-out" size={24} color="gray" style={{ marginRight: 15 }} />
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                     <TouchableOpacity onPress={handleprofile}>
 
                         <Ionicons name="person-circle" size={28} color="gray" />
@@ -202,57 +202,6 @@ const HomeScreen = () => {
                 </View>
             </View>
 
-            {/* 
-            <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
-                <Ionicons name="filter" size={18} />
-                <Text style={styles.filterText}>Toggle Filters</Text>
-            </TouchableOpacity> */}
-
-            {showFilters && (
-                <View style={styles.filterContainer}>
-                    {/* Country Filter */}
-                    <Text style={styles.filterLabel}>Country</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {["", ...countries.map(c => c.country)].map((country) => (
-                            <TouchableOpacity
-                                key={country}
-                                style={[styles.filterOption, selectedCountry === country && styles.selectedOption]}
-                                onPress={() => setSelectedCountry(country)}
-                            >
-                                <Text>{country || "All"}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-
-                    {/* Wine Type Filter */}
-                    <Text style={styles.filterLabel}>Wine Type</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {["", ...wineTypes.map(w => w.name)].map((type) => (
-                            <TouchableOpacity
-                                key={type}
-                                style={[styles.filterOption, selectedWineType === type && styles.selectedOption]}
-                                onPress={() => setSelectedWineType(type)}
-                            >
-                                <Text>{type || "All"}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-
-                    {/* Grape Type Filter */}
-                    <Text style={styles.filterLabel}>Grape Type</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {["", ...grapeTypes.map(g => g.name)].map((type) => (
-                            <TouchableOpacity
-                                key={type}
-                                style={[styles.filterOption, selectedGrapeType === type && styles.selectedOption]}
-                                onPress={() => setSelectedGrapeType(type)}
-                            >
-                                <Text>{type || "All"}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View>
-            )}
 
             {/* Trending Section */}
             <Text style={[styles.filterLabel, { marginTop: 20 }]}>Trending Wines</Text>
