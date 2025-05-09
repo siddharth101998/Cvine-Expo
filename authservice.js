@@ -12,8 +12,8 @@ import { signOut } from 'firebase/auth';
 
 // 🔧 Replace this with your actual IP if you're calling a local backend
 
-const host = "http://localhost:5002"
-//const host = "https://cvine.onrender.com"
+//const host = "http://localhost:5002"
+const host = "https://cvine.onrender.com"
 // 🔐 Register User
 export const registerUser = async (email, password, firstName) => {
     try {
@@ -44,10 +44,10 @@ export const registerUser = async (email, password, firstName) => {
 
 export const loginUser = async (email, password) => {
     try {
-     
-        console.log(`${host}/user/login`,email);
 
-    
+        console.log(`${host}/user/login`, email);
+
+
 
         const res = await axios.post(`${host}/user/login`, {
             email,
@@ -64,8 +64,8 @@ export const loginUser = async (email, password) => {
 export const logoutUser = async () => {
     try {
         // ↓↓ Skip Firebase sign-out
-         await signOut();
-         //If you need to notify backend, you could:
+        await signOut();
+        //If you need to notify backend, you could:
         // await axios.post(`${host}/user/logout`);
     } catch (error) {
         throw error;
