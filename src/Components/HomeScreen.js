@@ -193,7 +193,8 @@ const HomeScreen = () => {
                     <TouchableOpacity onPress={handlelogout}>
                         <Ionicons name="log-out" size={24} color="gray" style={{ marginRight: 15 }} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                    <TouchableOpacity onPress={handleprofile}>
+
                         <Ionicons name="person-circle" size={28} color="gray" />
                     </TouchableOpacity>
                 </View>

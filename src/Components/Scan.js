@@ -71,10 +71,10 @@ const ScanScreen = () => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
 
             <View style={styles.header}>
-                <Text style={styles.headerText}>Find Your Wine 🍷</Text>
+                <Text style={styles.headerText}>Find Your Wine </Text>
             </View>
             {imageUri && processing && (
                 <View style={styles.imageContainer}>
@@ -124,7 +124,7 @@ const ScanScreen = () => {
                     </ScrollView>
                 </View>
             )}
-        </SafeAreaView>
+        </View>
     );
 };
 
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fcf8f5',
-        alignItems: 'center'
+        alignItems: 'center',
 
     },
 
