@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import {
-View,
-Text,
-FlatList,
-StyleSheet,
-TouchableOpacity,
-Image,
-LayoutAnimation,
-UIManager,
-KeyboardAvoidingView,
-Platform,
-Share,
-ScrollView,
-Keyboard,
-Dimensions,
-Modal,
-TextInput,
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  LayoutAnimation,
+  UIManager,
+  KeyboardAvoidingView,
+  Platform,
+  Share,
+  ScrollView,
+  Keyboard,
+  Dimensions,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { storage } from '../../firebase';
@@ -31,7 +31,7 @@ import { host } from '../API-info/apiifno';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-UIManager.setLayoutAnimationEnabledExperimental(true);
+  UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 
@@ -85,746 +85,744 @@ const RecipeCard = ({ item, onLike, onSave, onDislike, onShare, onPress, userId 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export const RecipePage = () => {
-const { user } = useAuth();
-const [recipes, setRecipes] = useState([]);
-const [expandedIds, setExpandedIds] = useState([]);
-const [modalVisible, setModalVisible] = useState(false);
-const [selectedRecipe, setSelectedRecipe] = useState(null);
-const [showAddRecipe, setShowAddRecipe] = useState(false);
-const [newRecipe, setNewRecipe] = useState({
-  name: '',
-  items: [],
-  method: '',
-  bottles: [], // array of { id, name, image }
-  imageUrl: '',
-});
-const [currentItem, setCurrentItem] = useState({ itemName: '', quantity: '' });
-const [availableBottles, setAvailableBottles] = useState([]);
-const [bottleSearchText, setBottleSearchText] = useState('');
-const [profileImageUri, setProfileImageUri] = useState(null);
-const [searchResults, setSearchResults] = useState([]);
-const [comments, setComments] = useState([]);
-const [newComment, setNewComment] = useState(''); // Add state for newComment
-const [commentText, setCommentText] = useState('');
-const [loadingComments, setLoadingComments] = useState(false);
-const [error, setError] = useState(null);
-const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const [recipes, setRecipes] = useState([]);
+  const [expandedIds, setExpandedIds] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState(null);
+  const [showAddRecipe, setShowAddRecipe] = useState(false);
+  const [newRecipe, setNewRecipe] = useState({
+    name: '',
+    items: [],
+    method: '',
+    bottles: [], // array of { id, name, image }
+    imageUrl: '',
+  });
+  const [currentItem, setCurrentItem] = useState({ itemName: '', quantity: '' });
+  const [availableBottles, setAvailableBottles] = useState([]);
+  const [bottleSearchText, setBottleSearchText] = useState('');
+  const [profileImageUri, setProfileImageUri] = useState(null);
+  const [searchResults, setSearchResults] = useState([]);
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState(''); // Add state for newComment
+  const [commentText, setCommentText] = useState('');
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
 
-useEffect(() => {
-  fetchRecipes();
-  fetchBottles();
-}, 
-[]);
+  useEffect(() => {
+    fetchRecipes();
+    fetchBottles();
+  },
+    []);
 
 
-// Hoisted fetchRecipes so it can be called from useEffect
-async function fetchRecipes() {
-  try {
-    const response = await axios.get(`${host}/recipe/`);
-    // Sort so newest recipes appear first
-    setRecipes(response.data.slice().reverse());
-  } catch (error) {
-    console.error('Error fetching recipes:', error);
-  } finally {
-    setLoading(false);
+  // Hoisted fetchRecipes so it can be called from useEffect
+  async function fetchRecipes() {
+    try {
+      const response = await axios.get(`${host}/recipe/`);
+      // Sort so newest recipes appear first
+      setRecipes(response.data.slice().reverse());
+    } catch (error) {
+      console.error('Error fetching recipes:', error);
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
-// Fetch available bottles on mount
-const fetchBottles = async () => {
-  try {
-    const response = await axios.get(`${host}/bottle/`);
-    setAvailableBottles(Array.isArray(response.data) ? response.data : []);
-  } catch (error) {
-    console.error('Error fetching bottles:', error);
-  }
-};
+  // Fetch available bottles on mount
+  const fetchBottles = async () => {
+    try {
+      const response = await axios.get(`${host}/bottle/`);
+      setAvailableBottles(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error('Error fetching bottles:', error);
+    }
+  };
 
 
-useEffect(() => {
-  if (selectedRecipe) { fetchComments(selectedRecipe._id);
-  }
-}, [selectedRecipe]);
+  useEffect(() => {
+    if (selectedRecipe) {
+      fetchComments(selectedRecipe._id);
+    }
+  }, [selectedRecipe]);
 
-// Fetch Comments
-const fetchComments = async (recipeId) => {
-  setLoadingComments(true);
-  setError(null);
-  console.log('Fetching comments for recipeId:', recipeId);
-  try {
-    const response = await axios.get(`${host}/recipe/comment/${recipeId}`);
-    
-    const data = response.data;
-    console.log('Fetched comments:', data);
-    setComments(data.reverse()); // Optional: newest first
-  } catch (err) {
-    console.error(err);
-    setError(err.message);
-  } finally {
-    setLoadingComments(false);
-  }
-};
+  // Fetch Comments
+  const fetchComments = async (recipeId) => {
+    setLoadingComments(true);
+    setError(null);
+    console.log('Fetching comments for recipeId:', recipeId);
+    try {
+      const response = await axios.get(`${host}/recipe/comment/${recipeId}`);
 
-// Post Comment
-const postComment = async () => {
-  if (!commentText.trim()) return; // Prevent empty comments
+      const data = response.data;
+      console.log('Fetched comments:', data);
+      setComments(data.reverse()); // Optional: newest first
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
 
-  try {
-    const response = await axios.post(`${host}/recipe/comment`, {
+  // Post Comment
+  const postComment = async () => {
+    if (!commentText.trim()) return; // Prevent empty comments
+
+    try {
+      const response = await axios.post(`${host}/recipe/comment`, {
         recipeId: selectedRecipe._id,
         userId: user._id,
         userName: user.name,
         comment: commentText.trim(),
-    });
-    console.log('Comment posted:', response.data);
-    //setComments((prevComments) => [newComment, ...prevComments]); // Add new comment on top
-    //setCommentText('');
-  } catch (err) {
-    console.error(err);
-    alert('Error posting comment: ' + err.message);
-  }
-};
+      });
+      console.log('Comment posted:', response.data);
+      //setComments((prevComments) => [newComment, ...prevComments]); // Add new comment on top
+      //setCommentText('');
+    } catch (err) {
+      console.error(err);
+      alert('Error posting comment: ' + err.message);
+    }
+  };
 
 
-    
-// Debounced bottle search
-const fetchsearchBottles = async (query) => {
-  if (!query) {
-    setSearchResults([]);
-    return;
-  }
-  try {
-    const response = await axios.get(`${host}/bottle/search`, {
-      params: { q: query },
-    });
-    setSearchResults(response.data.data);
-  } catch (error) {
-    console.error('Error fetching search results:', error);
-  }
-};
-const debouncedSearch = debounce(fetchsearchBottles, 300);
 
-const handleSearchbottle = (text) => {
-  setBottleSearchText(text);
-  debouncedSearch(text);
-};
+  // Debounced bottle search
+  const fetchsearchBottles = async (query) => {
+    if (!query) {
+      setSearchResults([]);
+      return;
+    }
+    try {
+      const response = await axios.get(`${host}/bottle/search`, {
+        params: { q: query },
+      });
+      setSearchResults(response.data.data);
+    } catch (error) {
+      console.error('Error fetching search results:', error);
+    }
+  };
+  const debouncedSearch = debounce(fetchsearchBottles, 300);
 
-const handleAddItem = () => {
-  if (currentItem.itemName && currentItem.quantity) {
+  const handleSearchbottle = (text) => {
+    setBottleSearchText(text);
+    debouncedSearch(text);
+  };
+
+  const handleAddItem = () => {
+    if (currentItem.itemName && currentItem.quantity) {
+      setNewRecipe((prev) => ({
+        ...prev,
+        items: [...prev.items, currentItem],
+      }));
+      setCurrentItem({ itemName: '', quantity: '' });
+    }
+  };
+
+  const handleRemoveItem = (index) => {
     setNewRecipe((prev) => ({
       ...prev,
-      items: [...prev.items, currentItem],
+      items: prev.items.filter((_, i) => i !== index),
     }));
-    setCurrentItem({ itemName: '', quantity: '' });
-  }
-};
+  };
 
-const handleRemoveItem = (index) => {
-  setNewRecipe((prev) => ({
-    ...prev,
-    items: prev.items.filter((_, i) => i !== index),
-  }));
-};
+  const handleSubmitRecipe = async () => {
+    try {
+      const payload = {
+        name: newRecipe.name,
+        ingredients: newRecipe.items,
+        bottles: newRecipe.bottles,
+        method: newRecipe.method,
+        userName: user?.username,
+        byUserId: user?._id,
+        imageUrl: newRecipe.imageUrl, // Use the downloaded URL for backend submission
+      };
+      console.log('Submitting recipe:', payload);
+      const response = await axios.post(`${host}/recipe/`, payload);
+      setRecipes((prev) => [response.data, ...prev]);
+      setNewRecipe({ name: '', items: [], method: '', bottles: [], imageUrl: '' });
+      setProfileImageUri(null); // Reset the local preview
+      setShowAddRecipe(false);
 
-const handleSubmitRecipe = async () => {
-  try {
-    const payload = {
-      name: newRecipe.name,
-      ingredients: newRecipe.items,
-      bottles: newRecipe.bottles,
-      method: newRecipe.method,
-      userName: user?.username,
-      byUserId: user?._id,
-      imageUrl: newRecipe.imageUrl, // Use the downloaded URL for backend submission
-    };
-    console.log('Submitting recipe:', payload);
-    const response = await axios.post(`${host}/recipe/`, payload);
-    setRecipes((prev) => [response.data, ...prev]);
-    setNewRecipe({ name: '', items: [], method: '', bottles: [], imageUrl: '' });
-    setProfileImageUri(null); // Reset the local preview
-    setShowAddRecipe(false);
+    } catch (error) {
+      console.error('Error creating recipe:', error);
+    }
+    finally {
+      setNewRecipe({ name: '', items: [], method: '', bottles: [], imageUrl: '' });
+      setProfileImageUri(null); // Reset the local preview
+    }
 
-  } catch (error) {
-    console.error('Error creating recipe:', error);
-  }
-  finally {
-  setNewRecipe({ name: '', items: [], method: '', bottles: [], imageUrl: '' });
-  setProfileImageUri(null); // Reset the local preview
-  }
-  
-};
+  };
 
-const handleRemoveBottle = (id) => {
-  setNewRecipe((prev) => ({
-    ...prev,
-    bottles: prev.bottles.filter((b) => b.id !== id),
-  }));
-};
-const handleLike = async (id) => {
-  console.log('handleLike called for recipeId:', id);
-  try {
-    const response = await axios.put(`${host}/recipe/like`, {
-      recipeId: id,
-      userId: user._id,
+  const handleRemoveBottle = (id) => {
+    setNewRecipe((prev) => ({
+      ...prev,
+      bottles: prev.bottles.filter((b) => b.id !== id),
+    }));
+  };
+  const handleLike = async (id) => {
+    console.log('handleLike called for recipeId:', id);
+    try {
+      const response = await axios.put(`${host}/recipe/like`, {
+        recipeId: id,
+        userId: user._id,
+      });
+      console.log('handleLike response data:', response.data);
+      fetchRecipes();
+    } catch (error) {
+      console.error('Error liking recipe:', error);
+    }
+  };
+
+  const handleDislike = async (id) => {
+    try {
+      await axios.put(`${host}/recipe/dislike`, {
+        recipeId: id,
+        userId: user._id,
+      });
+      fetchRecipes();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleSave = async (id) => {
+    console.log('handleSave called for recipeId:', id);
+    try {
+      const response = await axios.put(`${host}/recipe/save`, {
+        recipeId: id,
+        userId: user._id,
+      });
+      console.log('handleSave response data:', response.data);
+      fetchRecipes();
+    } catch (error) {
+      console.error('Error saving recipe:', error);
+    }
+  };
+
+  const openModal = (item) => {
+    // Enrich bottle entries with imageUrl from fetched bottles list
+    const enrichedBottles = item.bottles.map(b => {
+      const match = (availableBottles || []).find(av => av._id === b.id);
+      return {
+        ...b,
+        imageUrl: match?.imageUrl || b.imageUrl || null,
+      };
     });
-    console.log('handleLike response data:', response.data);
-    fetchRecipes();
-  } catch (error) {
-    console.error('Error liking recipe:', error);
-  }
-};
+    setSelectedRecipe({ ...item, bottles: enrichedBottles });
+    setModalVisible(true);
+  };
 
-const handleDislike = async (id) => {
-  try {
-    await axios.put(`${host}/recipe/dislike`, {
-      recipeId: id,
-      userId: user._id,
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedRecipe(null);
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return;
+    try {
+      console.log('Adding comment:', user);
+      const response = await axios.post(`${host}/recipe/comment`, {
+        recipeId: selectedRecipe._id,
+        userId: user._id,
+        userName: user.username,
+        comment: newComment.trim(),
+      });
+      console.log('Comment added:', response.data);
+      // Refresh comments so commenterName is populated immediately
+      await fetchComments(selectedRecipe._id);
+      setNewComment('');
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    try {
+      await axios.delete(`${host}/recipe/comment/${commentId}`);
+      setComments(prev => prev.filter(comment => comment._id !== commentId));
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+    }
+  };
+
+
+  const toggleExpand = (id) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+
+
+  // const handleSave = (id) => {
+  //   // TODO: implement save/bookmark logic
+  //   console.log('Saved recipe', id);
+  // };
+
+  const handleShare = (item) => {
+    Share.share({
+      message: `Check out this recipe: ${item.name}\nIngredients: ${item.ingredients
+        .map((ing) => ing.itemName)
+        .join(', ')}\nMethod: ${item.method}`,
     });
-    fetchRecipes();
-  } catch (error) {
-    console.error(error);
-  }
-};
+  };
+  const pickImage = async () => {
+    // Request camera permissions
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Permission to access camera is required!');
+      return;
+    }
 
-const handleSave = async (id) => {
-  console.log('handleSave called for recipeId:', id);
-  try {
-    const response = await axios.put(`${host}/recipe/save`, {
-      recipeId: id,
-      userId: user._id,
+    // Launch camera
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
     });
-    console.log('handleSave response data:', response.data);
-    fetchRecipes();
-  } catch (error) {
-    console.error('Error saving recipe:', error);
-  }
-};
 
-const openModal = (item) => {
-  // Enrich bottle entries with imageUrl from fetched bottles list
-  const enrichedBottles = item.bottles.map(b => {
-    const match = (availableBottles || []).find(av => av._id === b.id);
-    return {
-      ...b,
-      imageUrl: match?.imageUrl || b.imageUrl || null,
-    };
-  });
-  setSelectedRecipe({ ...item, bottles: enrichedBottles });
-  setModalVisible(true);
-};
+    if (result.cancelled || result.canceled) {
+      return;
+    }
 
-const closeModal = () => {
-  setModalVisible(false);
-  setSelectedRecipe(null);
-};
+    // Get the local URI
+    const uri = result.uri ?? result.assets?.[0]?.uri;
+    if (!uri) {
+      console.error('Image URI is undefined');
+      return;
+    }
 
-const handleAddComment = async () => {
-  if (!newComment.trim()) return;
-  try {
-    console.log('Adding comment:', user);
-    const response = await axios.post(`${host}/recipe/comment`, {
-      recipeId: selectedRecipe._id,
-      userId: user._id,
-      userName: user.username,
-      comment: newComment.trim(),
-    });
-    console.log('Comment added:', response.data);
-    // Refresh comments so commenterName is populated immediately
-    await fetchComments(selectedRecipe._id);
-    setNewComment('');
-  } catch (error) {
-    console.error('Error adding comment:', error);
-  }
-};
+    // Preview
+    setProfileImageUri(uri);
 
-const handleDeleteComment = async (commentId) => {
-  try {
-    await axios.delete(`${host}/recipe/comment/${commentId}`);
-    setComments(prev => prev.filter(comment => comment._id !== commentId));
-  } catch (error) {
-    console.error('Error deleting comment:', error);
-  }
-};
+    // Upload to Firebase
+    try {
+      // Convert to Blob
+      const blob = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = () => resolve(xhr.response);
+        xhr.onerror = () => reject(new Error('Failed to convert URI to Blob'));
+        xhr.responseType = 'blob';
+        xhr.open('GET', uri, true);
+        xhr.send(null);
+      });
+      const fileName = uri.split('/').pop();
+      const storageRef = ref(storage, `recipe_images/${Date.now()}-${fileName}`);
+      await uploadBytes(storageRef, blob);
+      const downloadUrl = await getDownloadURL(storageRef);
+      console.log('Image uploaded successfully:', downloadUrl);
+      setNewRecipe(prev => ({ ...prev, imageUrl: downloadUrl }));
+      blob.close();
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('Upload Failed: ' + (err.message || 'Problem uploading image.'));
+    }
+  };
 
-
-const toggleExpand = (id) => {
-  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-  setExpandedIds((prev) =>
-    prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-  );
-};
+  const uploadAndProcessImage = async (uri) => {
+    try {
+      if (!uri) throw new Error('Image URI is undefined');
+      console.log('Uploading image:', uri);
+      // Convert the URI to a Blob
+      const blob = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = () => resolve(xhr.response);
+        xhr.onerror = () => reject(new Error('Failed to convert URI to Blob'));
+        xhr.responseType = 'blob';
+        xhr.open('GET', uri, true);
+        xhr.send(null);
+      });
 
 
+      // Upload the Blob to Firebase Storage
+      const fileName = uri.split('/').pop();
 
-// const handleSave = (id) => {
-//   // TODO: implement save/bookmark logic
-//   console.log('Saved recipe', id);
-// };
+      const storageRef = ref(storage, `recipe_images/${Date.now()}-${fileName}`);
 
-const handleShare = (item) => {
-  Share.share({
-    message: `Check out this recipe: ${item.name}\nIngredients: ${item.ingredients
-      .map((ing) => ing.itemName)
-      .join(', ')}\nMethod: ${item.method}`,
-  });
-};
-const pickImage = async () => {
-  // Request camera permissions
-  const { status } = await ImagePicker.requestCameraPermissionsAsync();
-  if (status !== 'granted') {
-    alert('Permission to access camera is required!');
-    return;
-  }
+      uploadBytes(storageRef, blob).then((snapshot) => {
+        console.log('Uploaded a blob or file!', snapshot);
 
-  // Launch camera
-  const result = await ImagePicker.launchCameraAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    allowsEditing: true,
-    aspect: [1, 1],
-    quality: 0.7,
-  });
+      });
 
-  if (result.cancelled || result.canceled) {
-    return;
-  }
+      // Get the download URL
+      const downloadUrl = await getDownloadURL(storageRef);
+      console.log('Image uploaded successfully:', downloadUrl);
+      // Clean up the Bl
+      blob.close();
+      return downloadUrl;
+    } catch (err) {
+      console.error('Upload error:', err);
+      Alert.alert('Upload Failed', err.message || 'There was a problem uploading the image.');
+    }
+  };
 
-  // Get the local URI
-  const uri = result.uri ?? result.assets?.[0]?.uri;
-  if (!uri) {
-    console.error('Image URI is undefined');
-    return;
-  }
+  const renderRecipe = ({ item }) => {
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.9}
+        onPress={() => openModal(item)}
+      >
+        {/* Recipe Image */}
+        {item.imageUrl ? (
+          <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+        ) : (
+          <View style={styles.cardImagePlaceholder} />
+        )}
 
-  // Preview
-  setProfileImageUri(uri);
+        {/* Recipe Details */}
+        <View style={styles.cardContent}>
+          <Text style={styles.cardTitle} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.cardSubtitle}>By {item.userName}</Text>
 
-  // Upload to Firebase
-  try {
-    // Convert to Blob
-    const blob = await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.onload = () => resolve(xhr.response);
-      xhr.onerror = () => reject(new Error('Failed to convert URI to Blob'));
-      xhr.responseType = 'blob';
-      xhr.open('GET', uri, true);
-      xhr.send(null);
-    });
-    const fileName = uri.split('/').pop();
-    const storageRef = ref(storage, `recipe_images/${Date.now()}-${fileName}`);
-    await uploadBytes(storageRef, blob);
-    const downloadUrl = await getDownloadURL(storageRef);
-    console.log('Image uploaded successfully:', downloadUrl);
-    setNewRecipe(prev => ({ ...prev, imageUrl: downloadUrl }));
-    blob.close();
-  } catch (err) {
-    console.error('Upload error:', err);
-    alert('Upload Failed: ' + (err.message || 'Problem uploading image.'));
-  }
-};
+          {/* Action Buttons */}
+          <View style={styles.cardActions}>
+            <TouchableOpacity onPress={() => handleLike(item._id)}>
+              <Ionicons
+                name={item.likedusers.includes(user._id) ? 'heart' : 'heart-outline'}
+                size={20}
+                color={item.likedusers.includes(user._id) ? '#e74c3c' : '#555'}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleShare(item)}>
+              <Ionicons name="share-outline" size={20} color="#555" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
-const uploadAndProcessImage = async (uri) => {
-  try {
-    if (!uri) throw new Error('Image URI is undefined');
-    console.log('Uploading image:', uri);
-    // Convert the URI to a Blob
-    const blob = await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.onload = () => resolve(xhr.response);
-      xhr.onerror = () => reject(new Error('Failed to convert URI to Blob'));
-      xhr.responseType = 'blob';
-      xhr.open('GET', uri, true);
-      xhr.send(null);
-    });
-   
-
-    // Upload the Blob to Firebase Storage
-    const fileName = uri.split('/').pop();
-    
-    const storageRef = ref(storage, `recipe_images/${Date.now()}-${fileName}`);
-  
-    uploadBytes(storageRef, blob).then((snapshot) => {
-      console.log('Uploaded a blob or file!', snapshot);
-    
-    });
-  
-    // Get the download URL
-    const downloadUrl = await getDownloadURL(storageRef);
-    console.log('Image uploaded successfully:', downloadUrl);
-    // Clean up the Bl
-    blob.close();
-    return downloadUrl;
-  } catch (err) {
-    console.error('Upload error:', err);
-    Alert.alert('Upload Failed', err.message || 'There was a problem uploading the image.');
-  }
-};
-
-const renderRecipe = ({ item }) => {
   return (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.9}
-      onPress={() => openModal(item)}
-    >
-      {/* Recipe Image */}
-      {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+    <View style={styles.container}>
+      {/* Header */}
+
+      <View style={styles.header}>
+        <Text style={styles.headerText}>Cocktail / Mocktail Recipes</Text>
+      </View>
+      {/* Create Recipe Button */}
+      <TouchableOpacity
+        style={styles.createButton}
+        onPress={() => setShowAddRecipe(!showAddRecipe)}
+      >
+        <Text style={styles.createButtonText}>Create Recipe</Text>
+      </TouchableOpacity>
+
+      {/* Recipe List */}
+      {loading ? (
+        <Text style={styles.loadingText}>Loading...</Text>
       ) : (
-        <View style={styles.cardImagePlaceholder} />
+        <FlatList
+          data={recipes}
+          keyExtractor={(item) => item._id}
+          renderItem={({ item }) => (
+            <RecipeCard
+              item={item}
+              onLike={handleLike}
+              onSave={handleSave}
+              onDislike={handleDislike}
+              onShare={handleShare}
+              onPress={openModal}
+              userId={user._id}
+            />
+          )}
+          contentContainerStyle={styles.listContent}
+          numColumns={1}
+          key={1}
+        />
       )}
 
-      {/* Recipe Details */}
-      <View style={styles.cardContent}>
-        <Text style={styles.cardTitle} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text style={styles.cardSubtitle}>By {item.userName}</Text>
-
-        {/* Action Buttons */}
-        <View style={styles.cardActions}>
-          <TouchableOpacity onPress={() => handleLike(item._id)}>
-            <Ionicons
-              name={item.likedusers.includes(user._id) ? 'heart' : 'heart-outline'}
-              size={20}
-              color={item.likedusers.includes(user._id) ? '#e74c3c' : '#555'}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleShare(item)}>
-            <Ionicons name="share-outline" size={20} color="#555" />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-};
-
-return (
-  <View style={styles.container}>
-    {/* Header */}
-    <LinearGradient
-      colors={['#B22222', '#FF6347']}
-      style={styles.header}
-    >
-      <Text style={styles.headerText}>Cocktail / Mocktail Recipes</Text>
-    </LinearGradient>
-
-    {/* Create Recipe Button */}
-    <TouchableOpacity
-      style={styles.createButton}
-      onPress={() => setShowAddRecipe(!showAddRecipe)}
-    >
-      <Text style={styles.createButtonText}>Create Recipe</Text>
-    </TouchableOpacity>
-
-    {/* Recipe List */}
-    {loading ? (
-      <Text style={styles.loadingText}>Loading...</Text>
-    ) : (
-      <FlatList
-        data={recipes}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item }) => (
-          <RecipeCard
-            item={item}
-            onLike={handleLike}
-            onSave={handleSave}
-            onDislike={handleDislike}
-            onShare={handleShare}
-            onPress={openModal}
-            userId={user._id}
-          />
-        )}
-        contentContainerStyle={styles.listContent}
-        numColumns={1}
-        key={1}
-      />
-    )}
-
-    {/* Create Recipe Modal */}
-    <Modal
-      visible={showAddRecipe}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setShowAddRecipe(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Create Recipe</Text>
-            <TouchableOpacity onPress={() => setShowAddRecipe(false)}>
-              <Ionicons name="close" size={24} color="#333" />
-            </TouchableOpacity>
-          </View>
-          <ScrollView>
-          <View style={styles.avatarContainer}>
-        
-    
-      </View>
-       <View style={styles.avatarContainer}>
-              <TouchableOpacity onPress={pickImage}>
-                {profileImageUri ? (
-                  <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
-                ) : (
-                  <Ionicons name="person-circle-outline" size={100} color="#B22222" />
-                )}
-              </TouchableOpacity>
-              <Text style={styles.avatarText}>Tap to select an image</Text>
-          </View>
-          <View style={styles.divider} />
-            
-            {/* Form Fields */}
-            <TextInput
-              style={styles.input}
-              placeholder="Recipe Name"
-              value={newRecipe.name}
-              onChangeText={(t) => setNewRecipe({ ...newRecipe, name: t })}
-            />
-            <View style={styles.row}>
-              <TextInput
-                style={[styles.input, { flex: 0.45, marginRight: 8 }]}
-                placeholder="Item Name"
-                value={currentItem.itemName}
-                onChangeText={(t) => setCurrentItem({ ...currentItem, itemName: t })}
-              />
-              <TextInput
-                style={[styles.input, { flex: 0.45 }]}
-                placeholder="Quantity"
-                value={currentItem.quantity}
-                onChangeText={(t) => setCurrentItem({ ...currentItem, quantity: t })}
-              />
-              <TouchableOpacity style={styles.smallButton} onPress={handleAddItem}>
-                <Ionicons name="add-circle" size={28} color="B22222" />
+      {/* Create Recipe Modal */}
+      <Modal
+        visible={showAddRecipe}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAddRecipe(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Create Recipe</Text>
+              <TouchableOpacity onPress={() => setShowAddRecipe(false)}>
+                <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
-           <Text style={styles.subHeader}>Items:</Text>
-           <View style={styles.itemsContainer}>
-             {newRecipe.items.map((it, idx) => (
-               <View key={idx} style={styles.itemTag}>
-                 <Text style={styles.itemTagText}>{it.itemName}</Text>
-                 {it.quantity ? (
-                   <Text style={styles.itemTagQuantity}>{it.quantity}</Text>
-                 ) : null}
-                 <TouchableOpacity onPress={() => handleRemoveItem(idx)} style={styles.itemTagRemove}>
-                   <Ionicons name="close-circle" size={16} color="#e74c3c" />
-                 </TouchableOpacity>
-               </View>
-             ))}
-           </View>
-            <TextInput
-              style={styles.input}
-              placeholder="Search Wines..."
-              value={bottleSearchText}
-              onChangeText={handleSearchbottle}
-            />
-            {searchResults.length > 0 && (
-              <View style={[styles.dropdown, styles.dropdownWrapper]}>
-                <ScrollView>
-                  {searchResults.map((b) => (
-                    <TouchableOpacity
-                      key={b._id}
-                      style={styles.dropdownItem}
-                      onPress={() => {
-                        setNewRecipe((prev) => ({
-                          ...prev,
-                          bottles: [
-                            ...prev.bottles,
-                            { id: b._id, name: b.name, imageUrl: b.imageUrl },
-                          ],
-                        }));
-                        setBottleSearchText('');
-                        setSearchResults([]);
-                      }}
-                    >
-                      {b.imageUrl && (
-                        <Image source={{ uri: b.imageUrl }} style={styles.dropdownItemImage} />
-                      )}
-                      <Text style={styles.dropdownItemText}>{b.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+            <ScrollView>
+              <View style={styles.avatarContainer}>
+
+
               </View>
-            )}
-            <Text style={styles.subHeader}>Selected Bottles:</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.selectedBottleContainer}
-            >
-              {newRecipe.bottles.map((b, i) => (
-                <View key={i} style={styles.selectedBottleCard}>
-                  <Image source={{ uri: b.imageUrl }} style={styles.selectedBottleCardImage} />
-                  <TouchableOpacity
-                    style={styles.selectedBottleCardRemove}
-                    onPress={() => handleRemoveBottle(b.id)}
-                  >
-                    <Ionicons name="close-circle" size={20} color="#e74c3c" />
-                  </TouchableOpacity>
-                  <Text style={styles.selectedBottleCardName} numberOfLines={1}>
-                    {b.name}
-                  </Text>
+              <View style={styles.avatarContainer}>
+                <TouchableOpacity onPress={pickImage}>
+                  {profileImageUri ? (
+                    <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
+                  ) : (
+                    <Ionicons name="person-circle-outline" size={100} color="#B22222" />
+                  )}
+                </TouchableOpacity>
+                <Text style={styles.avatarText}>Tap to select an image</Text>
+              </View>
+              <View style={styles.divider} />
+
+              {/* Form Fields */}
+              <TextInput
+                style={styles.input}
+                placeholder="Recipe Name"
+                value={newRecipe.name}
+                onChangeText={(t) => setNewRecipe({ ...newRecipe, name: t })}
+              />
+              <View style={styles.row}>
+                <TextInput
+                  style={[styles.input, { flex: 0.45, marginRight: 8 }]}
+                  placeholder="Item Name"
+                  value={currentItem.itemName}
+                  onChangeText={(t) => setCurrentItem({ ...currentItem, itemName: t })}
+                />
+                <TextInput
+                  style={[styles.input, { flex: 0.45 }]}
+                  placeholder="Quantity"
+                  value={currentItem.quantity}
+                  onChangeText={(t) => setCurrentItem({ ...currentItem, quantity: t })}
+                />
+                <TouchableOpacity style={styles.smallButton} onPress={handleAddItem}>
+                  <Ionicons name="add-circle" size={28} color="B22222" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.subHeader}>Items:</Text>
+              <View style={styles.itemsContainer}>
+                {newRecipe.items.map((it, idx) => (
+                  <View key={idx} style={styles.itemTag}>
+                    <Text style={styles.itemTagText}>{it.itemName}</Text>
+                    {it.quantity ? (
+                      <Text style={styles.itemTagQuantity}>{it.quantity}</Text>
+                    ) : null}
+                    <TouchableOpacity onPress={() => handleRemoveItem(idx)} style={styles.itemTagRemove}>
+                      <Ionicons name="close-circle" size={16} color="#e74c3c" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Search Wines..."
+                value={bottleSearchText}
+                onChangeText={handleSearchbottle}
+              />
+              {searchResults.length > 0 && (
+                <View style={[styles.dropdown, styles.dropdownWrapper]}>
+                  <ScrollView>
+                    {searchResults.map((b) => (
+                      <TouchableOpacity
+                        key={b._id}
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          setNewRecipe((prev) => ({
+                            ...prev,
+                            bottles: [
+                              ...prev.bottles,
+                              { id: b._id, name: b.name, imageUrl: b.imageUrl },
+                            ],
+                          }));
+                          setBottleSearchText('');
+                          setSearchResults([]);
+                        }}
+                      >
+                        {b.imageUrl && (
+                          <Image source={{ uri: b.imageUrl }} style={styles.dropdownItemImage} />
+                        )}
+                        <Text style={styles.dropdownItemText}>{b.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
                 </View>
-              ))}
-            </ScrollView>
-            <TextInput
-              style={[styles.input, { height: 100 }]}
-              placeholder="Method"
-              multiline
-              value={newRecipe.method}
-              onChangeText={(t) => setNewRecipe({ ...newRecipe, method: t })}
-            />
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmitRecipe}>
-              <Text style={styles.submitButtonText}>Submit</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-   <Modal
-  visible={modalVisible}
-  animationType="slide"
-  transparent={true}
-  onRequestClose={closeModal}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContent}>
-      {selectedRecipe && (
-        <ScrollView contentContainerStyle={styles.modalScroll}>
-          {/* Show recipe image at top */}
-          {selectedRecipe.imageUrl && (
-            <Image source={{ uri: selectedRecipe.imageUrl }} style={styles.modalImage} />
-          )}
-          {/* Header with Back Button */}
-          <View style={styles.modalHeader}>
-            <TouchableOpacity style={styles.backButton} onPress={closeModal}>
-              <Ionicons name="arrow-back" size={24} color="#333" />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>{selectedRecipe.name}</Text>
-          </View>
-          <View style={styles.divider} />
-
-          {/* Modal actions row: like, dislike, save */}
-          <View style={styles.modalActionsRow}>
-            <TouchableOpacity onPress={() => handleLike(selectedRecipe._id)} style={styles.modalAction}>
-              <Ionicons
-                name={selectedRecipe.likedusers.includes(user._id) ? 'thumbs-up' : 'thumbs-up-outline'}
-                size={24}
-                color={selectedRecipe.likedusers.includes(user._id) ? '#e74c3c' : '#777'}
-              />
-              <Text style={styles.modalActionText}>{selectedRecipe.likes}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleDislike(selectedRecipe._id)} style={styles.modalAction}>
-              <Ionicons
-                name={selectedRecipe.dislikedusers.includes(user._id) ? 'thumbs-down' : 'thumbs-down-outline'}
-                size={24}
-                color={selectedRecipe.dislikedusers.includes(user._id) ? '#3498db' : '#777'}
-              />
-              <Text style={styles.modalActionText}>{selectedRecipe.dislikes}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleSave(selectedRecipe._id)} style={styles.modalAction}>
-              <Ionicons
-                name={selectedRecipe.savedusers?.includes(user._id) ? 'bookmark' : 'bookmark-outline'}
-                size={24}
-                color={selectedRecipe.savedusers?.includes(user._id) ? '#2E8B57' : '#777'}
-              />
-            </TouchableOpacity>
-          </View>
-          {/* Recommended Badge */}
-          {selectedRecipe.expertRecommendation && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>Recommended</Text>
-            </View>
-          )}
-
-          {/* Ingredients Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Ingredients</Text>
-            {selectedRecipe.ingredients?.length > 0 ? (
-              selectedRecipe.ingredients.map((ing, i) => (
-                <View key={i} style={styles.ingredientRow}>
-                  <Ionicons name="ellipse" size={6} color="#555" style={styles.bulletIcon} />
-                  <Text style={styles.sectionText}>
-                    {ing.itemName}
-                    {ing.quantity ? `: ${ing.quantity}` : ''}
-                  </Text>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.sectionTextItalic}>No ingredients provided.</Text>
-            )}
-          </View>
-          <View style={styles.divider} />
-
-          {/* Method Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Method</Text>
-            <Text style={styles.sectionText}>{selectedRecipe.method || 'No method provided.'}</Text>
-          </View>
-          <View style={styles.divider} />
-
-          {/* Bottles Section */}
-          {selectedRecipe.bottles?.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Bottles</Text>
+              )}
+              <Text style={styles.subHeader}>Selected Bottles:</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.bottleScroll}
+                contentContainerStyle={styles.selectedBottleContainer}
               >
-                {selectedRecipe.bottles.map((b, idx) => (
-                  <View key={idx} style={styles.bottleItem}>
-                    <Image source={{ uri: b.imageUrl }} style={styles.bottleImageModal} />
-                    <Text style={styles.bottleName} numberOfLines={1}>
+                {newRecipe.bottles.map((b, i) => (
+                  <View key={i} style={styles.selectedBottleCard}>
+                    <Image source={{ uri: b.imageUrl }} style={styles.selectedBottleCardImage} />
+                    <TouchableOpacity
+                      style={styles.selectedBottleCardRemove}
+                      onPress={() => handleRemoveBottle(b.id)}
+                    >
+                      <Ionicons name="close-circle" size={20} color="#e74c3c" />
+                    </TouchableOpacity>
+                    <Text style={styles.selectedBottleCardName} numberOfLines={1}>
                       {b.name}
                     </Text>
                   </View>
                 ))}
               </ScrollView>
-            </View>
-          )}
-          <View style={styles.divider} />
+              <TextInput
+                style={[styles.input, { height: 100 }]}
+                placeholder="Method"
+                multiline
+                value={newRecipe.method}
+                onChangeText={(t) => setNewRecipe({ ...newRecipe, method: t })}
+              />
+              <TouchableOpacity style={styles.submitButton} onPress={handleSubmitRecipe}>
+                <Text style={styles.submitButtonText}>Submit</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={closeModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {selectedRecipe && (
+              <ScrollView contentContainerStyle={styles.modalScroll}>
+                {/* Show recipe image at top */}
+                {selectedRecipe.imageUrl && (
+                  <Image source={{ uri: selectedRecipe.imageUrl }} style={styles.modalImage} />
+                )}
+                {/* Header with Back Button */}
+                <View style={styles.modalHeader}>
+                  <TouchableOpacity style={styles.backButton} onPress={closeModal}>
+                    <Ionicons name="arrow-back" size={24} color="#333" />
+                  </TouchableOpacity>
+                  <Text style={styles.modalTitle}>{selectedRecipe.name}</Text>
+                </View>
+                <View style={styles.divider} />
 
-          {/* Comments Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Comments</Text>
-            {comments.length > 0 ? (
-              comments.map((comment, index) => (
-                <View key={index} style={styles.commentRow}>
-                 <Text style={styles.commentAuthor}>
-                    {comment.commenterName || comment.userName }:
-                </Text>
-                  <Text style={styles.commentText}>{comment.comment}</Text>
-                  {comment.userId === user._id && (
-                    <TouchableOpacity onPress={() => handleDeleteComment(comment._id)}>
-                      <Ionicons name="trash" size={20} color="red" />
-                    </TouchableOpacity>
+                {/* Modal actions row: like, dislike, save */}
+                <View style={styles.modalActionsRow}>
+                  <TouchableOpacity onPress={() => handleLike(selectedRecipe._id)} style={styles.modalAction}>
+                    <Ionicons
+                      name={selectedRecipe.likedusers.includes(user._id) ? 'thumbs-up' : 'thumbs-up-outline'}
+                      size={24}
+                      color={selectedRecipe.likedusers.includes(user._id) ? '#e74c3c' : '#777'}
+                    />
+                    <Text style={styles.modalActionText}>{selectedRecipe.likes}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDislike(selectedRecipe._id)} style={styles.modalAction}>
+                    <Ionicons
+                      name={selectedRecipe.dislikedusers.includes(user._id) ? 'thumbs-down' : 'thumbs-down-outline'}
+                      size={24}
+                      color={selectedRecipe.dislikedusers.includes(user._id) ? '#3498db' : '#777'}
+                    />
+                    <Text style={styles.modalActionText}>{selectedRecipe.dislikes}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleSave(selectedRecipe._id)} style={styles.modalAction}>
+                    <Ionicons
+                      name={selectedRecipe.savedusers?.includes(user._id) ? 'bookmark' : 'bookmark-outline'}
+                      size={24}
+                      color={selectedRecipe.savedusers?.includes(user._id) ? '#2E8B57' : '#777'}
+                    />
+                  </TouchableOpacity>
+                </View>
+                {/* Recommended Badge */}
+                {selectedRecipe.expertRecommendation && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>Recommended</Text>
+                  </View>
+                )}
+
+                {/* Ingredients Section */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Ingredients</Text>
+                  {selectedRecipe.ingredients?.length > 0 ? (
+                    selectedRecipe.ingredients.map((ing, i) => (
+                      <View key={i} style={styles.ingredientRow}>
+                        <Ionicons name="ellipse" size={6} color="#555" style={styles.bulletIcon} />
+                        <Text style={styles.sectionText}>
+                          {ing.itemName}
+                          {ing.quantity ? `: ${ing.quantity}` : ''}
+                        </Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.sectionTextItalic}>No ingredients provided.</Text>
                   )}
                 </View>
-              ))
-            ) : (
-              <Text style={styles.sectionTextItalic}>No comments yet.</Text>
-            )}
+                <View style={styles.divider} />
 
-            {/* Add Comment Input */}
-            <View style={styles.commentInputRow}>
-              <TextInput
-                style={styles.commentInput}
-                placeholder="Add a comment..."
-                value={newComment}
-                onChangeText={setNewComment}
-              />
-              <TouchableOpacity onPress={handleAddComment} disabled={!newComment.trim()}>
-                <Ionicons name="send" size={24} color={newComment.trim() ? '#B22222' : '#ccc'} />
-              </TouchableOpacity>
-            </View>
+                {/* Method Section */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Method</Text>
+                  <Text style={styles.sectionText}>{selectedRecipe.method || 'No method provided.'}</Text>
+                </View>
+                <View style={styles.divider} />
+
+                {/* Bottles Section */}
+                {selectedRecipe.bottles?.length > 0 && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Bottles</Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.bottleScroll}
+                    >
+                      {selectedRecipe.bottles.map((b, idx) => (
+                        <View key={idx} style={styles.bottleItem}>
+                          <Image source={{ uri: b.imageUrl }} style={styles.bottleImageModal} />
+                          <Text style={styles.bottleName} numberOfLines={1}>
+                            {b.name}
+                          </Text>
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+                <View style={styles.divider} />
+
+                {/* Comments Section */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Comments</Text>
+                  {comments.length > 0 ? (
+                    comments.map((comment, index) => (
+                      <View key={index} style={styles.commentRow}>
+                        <Text style={styles.commentAuthor}>
+                          {comment.commenterName || comment.userName}:
+                        </Text>
+                        <Text style={styles.commentText}>{comment.comment}</Text>
+                        {comment.userId === user._id && (
+                          <TouchableOpacity onPress={() => handleDeleteComment(comment._id)}>
+                            <Ionicons name="trash" size={20} color="red" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.sectionTextItalic}>No comments yet.</Text>
+                  )}
+
+                  {/* Add Comment Input */}
+                  <View style={styles.commentInputRow}>
+                    <TextInput
+                      style={styles.commentInput}
+                      placeholder="Add a comment..."
+                      value={newComment}
+                      onChangeText={setNewComment}
+                    />
+                    <TouchableOpacity onPress={handleAddComment} disabled={!newComment.trim()}>
+                      <Ionicons name="send" size={24} color={newComment.trim() ? '#B22222' : '#ccc'} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </ScrollView>
+            )}
           </View>
-        </ScrollView>
-      )}
+        </View>
+      </Modal>
     </View>
-  </View>
-</Modal>
-</View>
-);
+  );
 };
 
 export default RecipePage;
@@ -848,11 +846,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f5fa',
   },
   header: {
-    height: 150,
-    justifyContent: 'center',
+    paddingTop: 50,
+    paddingBottom: 20,
+    backgroundColor: '#B22222',
     alignItems: 'center',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
   },
   headerText: {
     color: '#fff',

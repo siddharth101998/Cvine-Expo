@@ -33,15 +33,15 @@ const SearchPage = () => {
     const [showFilters, setShowFilters] = useState(false);
 
     const toggleSelection = (item, selectedItems, setSelectedItems) => {
-        console.log("before updating,", selectedItems)
+
         if (selectedItems.includes(item)) {
 
             const updated = selectedItems.filter(i => i !== item);
             setSelectedItems(updated);
-            console.log("after removing th item updating,", selectedItems)
+
         } else {
             setSelectedItems([...selectedItems, item]);
-            console.log("after adding ,", selectedItems)
+
         }
 
     };
@@ -57,7 +57,7 @@ const SearchPage = () => {
 
     const fetchBottles = async (query) => {
 
-        //console.log('grape', selectedGrapeTypes);
+        console.log('winetypes', selectedWineTypes);
 
         setLoading(true);
         try {

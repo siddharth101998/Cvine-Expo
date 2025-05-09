@@ -126,7 +126,7 @@ const GetRecommendation = ({ }) => {
                 usage = { date: today, count: 0 };
             }
             console.log("usage", usage);
-            if (usage.count >= 7) {
+            if (usage.count >= 3) {
 
                 alert('Your free daily recommendations are finished. Upgrade to premium to get more recommendations.');
                 return;
