@@ -55,7 +55,7 @@ const RecipeCard = ({ item, onLike, onSave, onDislike, onShare, onPress, userId 
           <Ionicons
             name={item.likedusers.includes(userId) ? 'thumbs-up' : 'thumbs-up-outline'}
             size={20}
-            color={item.likedusers.includes(userId) ? '#e74c3c' : '#777'}
+            color={item.likedusers.includes(userId) ? '#2E8B57' : '#777'}
           />
           <Text style={styles.actionText}>{item.likes}</Text>
         </TouchableOpacity>
@@ -63,8 +63,9 @@ const RecipeCard = ({ item, onLike, onSave, onDislike, onShare, onPress, userId 
           <Ionicons
             name={item.dislikedusers.includes(userId) ? 'thumbs-down' : 'thumbs-down-outline'}
             size={20}
-            color={item.dislikedusers.includes(userId) ? '#3498db' : '#777'}
+            color={item.dislikedusers.includes(userId) ? '#e74c3c' : '#777'}
           />
+          <Text style={styles.actionText}>{item.dislikes}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={() => onSave(item._id)}>
           <Ionicons
@@ -134,7 +135,7 @@ async function fetchRecipes() {
 const fetchBottles = async () => {
   try {
     const response = await axios.get(`${host}/bottle/`);
-    setAvailableBottles(response.data);
+    setAvailableBottles(Array.isArray(response.data) ? response.data : []);
   } catch (error) {
     console.error('Error fetching bottles:', error);
   }
@@ -219,6 +220,13 @@ const handleAddItem = () => {
   }
 };
 
+const handleRemoveItem = (index) => {
+  setNewRecipe((prev) => ({
+    ...prev,
+    items: prev.items.filter((_, i) => i !== index),
+  }));
+};
+
 const handleSubmitRecipe = async () => {
   try {
     const payload = {
@@ -293,8 +301,16 @@ const handleSave = async (id) => {
   }
 };
 
-const openModal = async (item) => {
-  setSelectedRecipe(item);
+const openModal = (item) => {
+  // Enrich bottle entries with imageUrl from fetched bottles list
+  const enrichedBottles = item.bottles.map(b => {
+    const match = (availableBottles || []).find(av => av._id === b.id);
+    return {
+      ...b,
+      imageUrl: match?.imageUrl || b.imageUrl || null,
+    };
+  });
+  setSelectedRecipe({ ...item, bottles: enrichedBottles });
   setModalVisible(true);
 };
 
@@ -305,19 +321,17 @@ const closeModal = () => {
 
 const handleAddComment = async () => {
   if (!newComment.trim()) return;
-
   try {
     console.log('Adding comment:', user);
     const response = await axios.post(`${host}/recipe/comment`, {
-        recipeId: selectedRecipe._id,
-        userId: user._id,
-        userName: user.username,
-        comment: newComment.trim(), // <-- match the key used in your DB
-      });
+      recipeId: selectedRecipe._id,
+      userId: user._id,
+      userName: user.username,
+      comment: newComment.trim(),
+    });
     console.log('Comment added:', response.data);
-
-    const savedComment = response.data;
-    setComments(prev => [savedComment, ...prev]);
+    // Refresh comments so commenterName is populated immediately
+    await fetchComments(selectedRecipe._id);
     setNewComment('');
   } catch (error) {
     console.error('Error adding comment:', error);
@@ -522,8 +536,8 @@ return (
           />
         )}
         contentContainerStyle={styles.listContent}
-        numColumns={2}
-        columnWrapperStyle={styles.gridRow}
+        numColumns={1}
+        key={1}
       />
     )}
 
@@ -583,13 +597,20 @@ return (
                 <Ionicons name="add-circle" size={28} color="B22222" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.subHeader}>Items:</Text>
-            {newRecipe.items.map((it, idx) => (
-              <View key={idx} style={styles.itemRow}>
-                <Text style={styles.itemText}>{it.itemName}</Text>
-                <Text style={styles.itemQuantity}>{it.quantity}</Text>
-              </View>
-            ))}
+           <Text style={styles.subHeader}>Items:</Text>
+           <View style={styles.itemsContainer}>
+             {newRecipe.items.map((it, idx) => (
+               <View key={idx} style={styles.itemTag}>
+                 <Text style={styles.itemTagText}>{it.itemName}</Text>
+                 {it.quantity ? (
+                   <Text style={styles.itemTagQuantity}>{it.quantity}</Text>
+                 ) : null}
+                 <TouchableOpacity onPress={() => handleRemoveItem(idx)} style={styles.itemTagRemove}>
+                   <Ionicons name="close-circle" size={16} color="#e74c3c" />
+                 </TouchableOpacity>
+               </View>
+             ))}
+           </View>
             <TextInput
               style={styles.input}
               placeholder="Search Wines..."
@@ -597,8 +618,8 @@ return (
               onChangeText={handleSearchbottle}
             />
             {searchResults.length > 0 && (
-              <View style={styles.dropdown}>
-                <ScrollView style={{ maxHeight: 150 }}>
+              <View style={[styles.dropdown, styles.dropdownWrapper]}>
+                <ScrollView>
                   {searchResults.map((b) => (
                     <TouchableOpacity
                       key={b._id}
@@ -606,30 +627,45 @@ return (
                       onPress={() => {
                         setNewRecipe((prev) => ({
                           ...prev,
-                          bottles: [...prev.bottles, { id: b._id, name: b.name, imageurl: b.image }],
+                          bottles: [
+                            ...prev.bottles,
+                            { id: b._id, name: b.name, imageUrl: b.imageUrl },
+                          ],
                         }));
                         setBottleSearchText('');
                         setSearchResults([]);
                       }}
                     >
-                      <Text>{b.name}</Text>
+                      {b.imageUrl && (
+                        <Image source={{ uri: b.imageUrl }} style={styles.dropdownItemImage} />
+                      )}
+                      <Text style={styles.dropdownItemText}>{b.name}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
               </View>
             )}
             <Text style={styles.subHeader}>Selected Bottles:</Text>
-            <View style={styles.selectedBottleContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.selectedBottleContainer}
+            >
               {newRecipe.bottles.map((b, i) => (
-                <View key={i} style={styles.selectedBottle}>
-                  <Image source={{ uri: b.imageUrl }} style={styles.selectedBottleImage} />
-                  <Text style={styles.selectedBottleName}>{b.name}</Text>
-                  <TouchableOpacity onPress={() => handleRemoveBottle(b.id)}>
-                    <Ionicons name="close-circle" size={18} color="#B22222" />
+                <View key={i} style={styles.selectedBottleCard}>
+                  <Image source={{ uri: b.imageUrl }} style={styles.selectedBottleCardImage} />
+                  <TouchableOpacity
+                    style={styles.selectedBottleCardRemove}
+                    onPress={() => handleRemoveBottle(b.id)}
+                  >
+                    <Ionicons name="close-circle" size={20} color="#e74c3c" />
                   </TouchableOpacity>
+                  <Text style={styles.selectedBottleCardName} numberOfLines={1}>
+                    {b.name}
+                  </Text>
                 </View>
               ))}
-            </View>
+            </ScrollView>
             <TextInput
               style={[styles.input, { height: 100 }]}
               placeholder="Method"
@@ -737,7 +773,7 @@ return (
               >
                 {selectedRecipe.bottles.map((b, idx) => (
                   <View key={idx} style={styles.bottleItem}>
-                    <Image source={{ uri: b.image }} style={styles.bottleImageModal} />
+                    <Image source={{ uri: b.imageUrl }} style={styles.bottleImageModal} />
                     <Text style={styles.bottleName} numberOfLines={1}>
                       {b.name}
                     </Text>
@@ -755,7 +791,7 @@ return (
               comments.map((comment, index) => (
                 <View key={index} style={styles.commentRow}>
                  <Text style={styles.commentAuthor}>
-                    {comment.commenterName || comment.userName || 'Anonymous'}:
+                    {comment.commenterName || comment.userName }:
                 </Text>
                   <Text style={styles.commentText}>{comment.comment}</Text>
                   {comment.userId === user._id && (
@@ -794,10 +830,6 @@ return (
 export default RecipePage;
 
 const styles = StyleSheet.create({
-  gridRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
   cardImageContainer: {
     width: '100%',
     height: 120,
@@ -932,6 +964,43 @@ const styles = StyleSheet.create({
   smallButton: {
     marginLeft: 8,
   },
+  dropdownWrapper: {
+    position: 'absolute',
+    top: 180,            // adjust as needed to sit below the search input
+    left: 16,
+    right: 16,
+    zIndex: 1000,
+  },
+  dropdown: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    maxHeight: 200,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderColor: '#eee',
+  },
+  dropdownItemImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
   subHeader: {
     fontSize: 16,
     fontWeight: '600',
@@ -953,6 +1022,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
   },
+  itemsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginVertical: 8,
+  },
+  itemTag: {
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  itemTagText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  itemTagQuantity: {
+    fontSize: 12,
+    color: '#555',
+    marginLeft: 6,
+  },
+  itemTagRemove: {
+    marginLeft: 6,
+  },
   submitButton: {
     backgroundColor: '#B22222',
     padding: 12,
@@ -966,31 +1062,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   selectedBottleContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
-  selectedBottle: {
-    flexDirection: 'row',
+  selectedBottleCard: {
+    width: 100,
+    marginRight: 12,
     alignItems: 'center',
-    // backgroundColor: '#f0f0f0',
-    borderRadius: 16,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    marginRight: 8,
-    marginBottom: 8,
+    position: 'relative',
   },
-  selectedBottleImage: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginRight: 6,
+  selectedBottleCardImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginBottom: 6,
   },
-  selectedBottleName: {
-    fontSize: 14,
+  selectedBottleCardRemove: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+  },
+  selectedBottleCardName: {
+    fontSize: 12,
+    textAlign: 'center',
     color: '#333',
-    marginRight: 6,
   },
   ingredientRow: {
     flexDirection: 'row',
@@ -1103,6 +1200,22 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     color: '#999',
     marginLeft: 8,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 8,
+  },
+  actionText: {
+    marginLeft: 4,
+    fontSize: 14,
+    color: '#777',
   },
   inlineBottleScroll: {
     marginTop: 8,
