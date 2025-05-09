@@ -133,11 +133,15 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
         backgroundColor: '#B22222',
         alignItems: 'center',
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        
     },
     headerText: {
         color: '#fff',
         fontSize: 24,
         fontWeight: 'bold',
+        marginTop:20,
     },
     messagesContainer: {
         padding: 15,
