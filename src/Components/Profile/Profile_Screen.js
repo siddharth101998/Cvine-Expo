@@ -142,7 +142,6 @@ const ProfileScreen = () => {
     // Otherwise, create a placeholder object with badgeLogo as a placeholder image URL
     return { _id: badgeId, badgeLogo: 'https://via.placeholder.com/40' };
   }) : [];
-
   return (
     <View style={styles.container}>
       {/* Gradient Header */}
@@ -150,15 +149,11 @@ const ProfileScreen = () => {
         colors={['#B22222', '#FF6347']}
         style={styles.gradientHeader}
       >
-        <TouchableOpacity
-          style={styles.settingsIcon}
-          onPress={() => {
-            navigation.navigate('ProfileSetting');
-          }}
-        >
+        {/* Profile Settings */}
+        <TouchableOpacity style={styles.settingsIcon} onPress={() => navigation.navigate('ProfileSetting')}>
           <Ionicons name="settings-outline" size={28} color="#fff" />
         </TouchableOpacity>
-
+  
         {/* Avatar and Username */}
         <View style={styles.avatarContainer}>
           <TouchableOpacity onPress={pickImage}>
@@ -170,8 +165,8 @@ const ProfileScreen = () => {
           </TouchableOpacity>
           <Text style={styles.username}>{user.username}</Text>
         </View>
-
-        {/* Stats Section */}
+  
+        {/* Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statBox}>
             <Ionicons name="book-outline" size={24} color="#fff" />
@@ -185,81 +180,55 @@ const ProfileScreen = () => {
           </View>
         </View>
       </LinearGradient>
-
-      {/* Badges Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Badges</Text>
-        <View style={styles.badgesList}>
-          {badgeDetails.map((badge) => (
-            <Image
-              key={badge._id}
-              source={{ uri: badge.badgeLogo }}
-              style={styles.badgeLogo}
-            />
-          ))}
-        </View>
+  {/* Fixed Badges Section
+  <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Badges</Text>
+      <View style={styles.badgesList}>
+        {badgeDetails.map((badge) => (
+          <Image key={badge._id} source={{ uri: badge.badgeLogo }} style={styles.badgeLogo} />
+        ))}
       </View>
+    </View> */}
 
-      {/* Tabs Section */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'wishlist' && styles.activeTab]}
-          onPress={() => setActiveTab('wishlist')}
-        >
-          <Text style={[styles.tabText, activeTab === 'wishlist' && styles.activeTabText]}>
-            Wishlist
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'search' && styles.activeTab]}
-          onPress={() => setActiveTab('search')}
-        >
-          <Text style={[styles.tabText, activeTab === 'search' && styles.activeTabText]}>
-            Search History
-          </Text>
-        </TouchableOpacity>
-      </View>
+    {/* Fixed Tabs */}
+    <View style={styles.tabContainer}>
+      <TouchableOpacity
+        style={[styles.tab, activeTab === 'wishlist' && styles.activeTab]}
+        onPress={() => setActiveTab('wishlist')}
+      >
+        <Text style={[styles.tabText, activeTab === 'wishlist' && styles.activeTabText]}>Wishlist</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.tab, activeTab === 'search' && styles.activeTab]}
+        onPress={() => setActiveTab('search')}
+      >
+        <Text style={[styles.tabText, activeTab === 'search' && styles.activeTabText]}>Search History</Text>
+      </TouchableOpacity>
+    </View>
 
-      {/* Tab Content */}
+    {/* Only Scroll This Area */}
+    <ScrollView style={styles.scrollList} contentContainerStyle={{ paddingBottom: 100 }}>
       <View style={styles.tabContent}>
-        {activeTab === 'wishlist' ? (
-          <ScrollView
-            style={styles.scrollableContainer}
-            contentContainerStyle={{ paddingBottom: 16 }}
-            showsVerticalScrollIndicator={false}
-          >
-            {wishlistBottles.map((item, idx) => (
-              <TouchableOpacity
-                key={item._id ?? idx.toString()}
-                style={styles.listItem}
-                onPress={() => navigation.navigate('Bottle', { id: item._id })}
-              >
-                <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
-                <Text style={styles.listText}>{item.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        ) : (
-          <ScrollView
-            style={styles.scrollableContainer}
-            contentContainerStyle={{ paddingBottom: 16 }}
-            showsVerticalScrollIndicator={false}
-          >
-            {searchHistory.map((item, idx) => (
-              <TouchableOpacity
-                key={item._id ?? idx.toString()}
-                style={styles.listItem}
-                onPress={() => navigation.navigate('Bottle', { id: item.bottle._id })}
-              >
-                <Image source={{ uri: item.bottle.imageUrl }} style={styles.cardImage} />
-                <Text style={styles.listText}>{item.bottle.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
+        {(activeTab === 'wishlist' ? wishlistBottles : searchHistory).map((item, idx) => {
+          const bottle = activeTab === 'wishlist' ? item : item.bottle;
+          return (
+            <TouchableOpacity
+              key={bottle._id ?? idx.toString()}
+              style={styles.listItem}
+              onPress={() => navigation.navigate('Bottle', { id: bottle._id })}
+            >
+              <Image source={{ uri: bottle.imageUrl }} style={styles.cardImage} />
+              <Text style={styles.listText}>{bottle.name}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
+    </ScrollView>
+      
+      
     </View>
   );
+  
 };
 
 export default ProfileScreen;
