@@ -44,7 +44,9 @@ const RecipeCard = ({ item, onLike, onSave, onDislike, onShare, onPress, userId 
       {item.imageUrl ? (
         <Image source={{ uri: item.imageUrl }} style={styles.cardImageHorizontal} />
       ) : (
-        <View style={styles.cardImagePlaceholder} />
+        <View style={[styles.cardImagePlaceholder, styles.iconPlaceholder]}>
+          <Ionicons name="wine-outline" size={40} color="#B22222" />
+        </View>
       )}
     </View>
     <View style={styles.cardContent}>
@@ -740,17 +742,28 @@ export const RecipePage = () => {
           <View style={styles.modalContent}>
             {selectedRecipe && (
               <ScrollView contentContainerStyle={styles.modalScroll}>
-                {/* Show recipe image at top */}
-                {selectedRecipe.imageUrl && (
-                  <Image source={{ uri: selectedRecipe.imageUrl }} style={styles.modalImage} />
-                )}
                 {/* Header with Back Button */}
-                <View style={styles.modalHeader}>
-                  <TouchableOpacity style={styles.backButton} onPress={closeModal}>
-                    <Ionicons name="arrow-back" size={24} color="#333" />
-                  </TouchableOpacity>
-                  <Text style={styles.modalTitle}>{selectedRecipe.name}</Text>
-                </View>
+<View style={styles.modalHeader}>
+  <TouchableOpacity style={styles.backButton} onPress={closeModal}>
+    <Ionicons name="arrow-back" size={24} color="#333" />
+  </TouchableOpacity>
+</View>
+
+{/* Recipe Title Centered */}
+<Text style={styles.modalTitleCenter}>{selectedRecipe.name}</Text>
+
+{/* Recipe image or wine icon placeholder */}
+{selectedRecipe.imageUrl ? (
+  <Image
+    source={{ uri: selectedRecipe.imageUrl }}
+    style={styles.modalImage}
+    resizeMode="cover"
+  />
+) : (
+  <View style={[styles.modalImage, styles.iconPlaceholder]}>
+    <Ionicons name="wine-outline" size={80} color="#B22222" />
+  </View>
+)}
                 <View style={styles.divider} />
 
                 {/* Recommended Badge */}
@@ -797,8 +810,12 @@ export const RecipePage = () => {
                     >
                       {selectedRecipe.bottles.map((b, idx) => (
                         <View key={idx} style={styles.bottleItem}>
-                          <Image source={{ uri: b.imageUrl }} style={styles.bottleImageModal} />
-                          <Text style={styles.bottleName} numberOfLines={1}>
+                          <Image
+                            source={{ uri: b.imageUrl }}
+                            style={styles.bottleImageModal}
+                            resizeMode="contain"
+                          />
+                          <Text style={styles.bottleName} numberOfLines={2}>
                             {b.name}
                           </Text>
                         </View>
@@ -954,6 +971,10 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: '#ddd',
+  },
+  iconPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cardContent: {
     padding: 12,
@@ -1318,6 +1339,11 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
     marginBottom: 12,
   },
+  iconPlaceholder: {
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   modalActionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -1341,4 +1367,35 @@ const styles = StyleSheet.create({
   requiredIcon: {
     color: '#e74c3c',
   },
+  // ---- Modal-specific bottle styles ----
+  bottleScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  bottleItem: {
+    alignItems: 'center',
+    marginRight: 12,
+    width: 100,
+  },
+  bottleImageModal: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    marginBottom: 4,
+    backgroundColor: '#f0f0f0',
+  },
+  bottleName: {
+    fontSize: 14,
+    color: '#333',
+    textAlign: 'center',
+    width: 100,
+    flexWrap: 'wrap',
+  },
+modalTitleCenter: {
+  fontSize: 22,
+  fontWeight: 'bold',
+  textAlign: 'center',
+  color: '#333',
+  marginBottom: 12,
+},
 });

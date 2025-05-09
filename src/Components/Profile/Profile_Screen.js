@@ -36,6 +36,11 @@ const ProfileScreen = () => {
     }
   };
 
+  const handleBottleClick = (bottleId) => {
+    navigation.navigate("Bottle", { id: bottleId });
+    console.log("Bottle selected:", bottleId);
+};
+
   // const fetchSearchHistory = async () => {
   //   if (!user) return;
   //   try {
@@ -84,7 +89,7 @@ const ProfileScreen = () => {
     if (!user) return;
     try {
       const res = await axios.get(`${host}/searchHistory/${user._id}`);
-      console.log("searchhistory response:", res.data.length);
+      console.log("searchhistory response:", res.data[0]);
 
       // Sort search history so newest items appear first
       const sortedHistory = res.data.sort((a, b) => {
@@ -239,7 +244,8 @@ const ProfileScreen = () => {
             // Use Mongoose timestamps (createdAt), fallback to legacy field
             const date = item.createdAt || item.createdat;
             return (
-              <View style={styles.cardItem}>
+             <TouchableOpacity onPress={()=> activeTab === 'wishlist'?handleBottleClick(item._id): handleBottleClick(item.bottle._id)}> 
+             <View style={styles.cardItem}>
                 <Image
                   source={{ uri: item.imageUrl || item.bottle?.imageUrl }}
                   style={styles.cardImage}
@@ -250,6 +256,9 @@ const ProfileScreen = () => {
                   <Text style={styles.timeText}>{formatDate(date)}</Text>
                 )}
               </View>
+              </TouchableOpacity>
+             
+
             );
           }}
         />
