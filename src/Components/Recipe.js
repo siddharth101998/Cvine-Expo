@@ -859,7 +859,7 @@ const styles = StyleSheet.create({
   createButton: {
     backgroundColor: '#B22222',
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 100,
     borderRadius: 8,
     alignSelf: 'center',
     marginVertical: 16,
@@ -1253,5 +1253,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     marginTop: 4,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+    color: '#333',
+  },
+  requiredIcon: {
+    color: '#e74c3c',
   },
 });
