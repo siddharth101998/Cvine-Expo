@@ -18,11 +18,12 @@ import {
     KeyboardAvoidingView,
     Platform,
 } from 'react-native';
+import { signOut } from 'firebase/auth';
 
 // 🔧 Replace this with your actual IP if you're calling a local backend
 
-const host = "http://localhost:5002"
-// const host = "https://cvine.onrender.com"
+//const host = "http://localhost:5002"
+const host = "https://cvine.onrender.com"
 // 🔐 Register User
 export const registerUser = async (email, password, username, fullName) => {
     try {
@@ -44,25 +45,26 @@ export const registerUser = async (email, password, username, fullName) => {
             username,
             fullName,
         });
-        if (res.ok){ Alert.alert('Success', 'Account created successfully!');}
+        if (res.ok) { Alert.alert('Success', 'Account created successfully!'); }
 
         return res.data.data;
     } catch (error) {
         // AxiosError for 400, 500, etc:
-        if (error.response && error.response.data && error.response.data.message) {  Alert.alert('Error', error.response.data.message);
+        if (error.response && error.response.data && error.response.data.message) {
+            Alert.alert('Error', error.response.data.message);
         } else {
-          Alert.alert('Error', error.message || 'Something went wrong');
+            Alert.alert('Error', error.message || 'Something went wrong');
         }
-      }
+    }
 };
 
 
 export const loginUser = async (email, password) => {
     try {
-     
-        console.log(`${host}/user/login`,email);
 
-    
+        console.log(`${host}/user/login`, email);
+
+
 
         const res = await axios.post(`${host}/user/login`, {
             email,
@@ -79,8 +81,8 @@ export const loginUser = async (email, password) => {
 export const logoutUser = async () => {
     try {
         // ↓↓ Skip Firebase sign-out
-        // await signOut(auth);
-        // If you need to notify backend, you could:
+        await signOut();
+        //If you need to notify backend, you could:
         // await axios.post(`${host}/user/logout`);
     } catch (error) {
         throw error;

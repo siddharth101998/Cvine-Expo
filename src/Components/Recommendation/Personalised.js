@@ -1,19 +1,33 @@
 // src/Components/Personalized.js
 import React, { useEffect, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, Image, StyleSheet, View, ActivityIndicator, } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { host } from '../../API-info/apiifno';
+import { Ionicons } from '@expo/vector-icons';
 const Personalized = ({ }) => {
     const navigation = useNavigation();
     const [recommendations, setRecommendations] = useState([]);
+    const [loading, setLoading] = useState(true);
     useEffect(() => {
         const fetchStoredRecommendations = async () => {
             try {
                 const stored = await AsyncStorage.getItem('wineRecommendations');
+                console.log("stored", stored)
                 if (stored) {
-                
-                    setRecommendations(JSON.parse(stored));
+                    const parsed = JSON.parse(stored);
+
+                    const seen = new Set();
+                    const unique = parsed.filter((item) => {
+                        if (seen.has(item.bottleId)) {
+                            return false; // skip duplicate
+                        }
+                        seen.add(item.bottleId);
+                        return true; // keep unique
+                    });
+
+                    setRecommendations(unique);
+
                 }
             } catch (e) {
                 console.error('Failed to load stored recommendations', e);
@@ -25,9 +39,17 @@ const Personalized = ({ }) => {
 
     return (
         <ScrollView style={styles.inner}>
+            <View style={styles.infoBox}>
+                <Ionicons name="information-circle-outline" size={16} color="#555" style={{ marginRight: 4 }} />
+                <Text style={styles.infoText}>
+                    Your personalized recommendations are generated once per day based on your search history and wishlist bottles.
+                </Text>
+            </View>
             {recommendations.length === 0 ? (
-                <Text style={styles.noResultText}>No recommendations yet.</Text>
-            ) : (
+
+                <Text> {loading && <ActivityIndicator size="large" color="#0000ff" style={{ marginTop: 20 }} />}
+                    <Text style={styles.noResultText}>Recommednation are Being Fetched.</Text>
+                </Text>) : (
                 recommendations.map((wine) => (
                     <TouchableOpacity
                         key={wine.bottleId}
@@ -90,6 +112,18 @@ const styles = StyleSheet.create({
     inner: {
         padding: 10,
     },
+    infoBox: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        marginBottom: 12,
+        paddingHorizontal: 4,
+    },
 
+    infoText: {
+        fontSize: 12,
+        color: '#555',
+        fontStyle: 'italic',
+        flex: 1,
+    }
 
 })

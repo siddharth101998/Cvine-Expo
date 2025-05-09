@@ -16,9 +16,12 @@ import debounce from 'lodash.debounce';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import logo from '../../assets/logo.png';
+import LoginPrompt from './LoginPrompt';
+import { logoutUser } from '../../authservice';
 
 import { host } from '../API-info/apiifno';
 import { useAuth } from '../authContext/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const HomeScreen = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [searchText, setSearchText] = useState('');
@@ -26,27 +29,33 @@ const HomeScreen = () => {
     const [countries, setCountries] = useState([]);
     const [wineTypes, setWineTypes] = useState([]);
     const [grapeTypes, setGrapeTypes] = useState([]);
-    const [trending, setTrending] = useState({ data: [] });
+    const [trending, setTrending] = useState([]);
     const [selectedCountry, setSelectedCountry] = useState('');
     const [selectedWineType, setSelectedWineType] = useState('');
     const [selectedGrapeType, setSelectedGrapeType] = useState('');
     const [showFilters, setShowFilters] = useState(false);
     const navigation = useNavigation();
     const { user, updateUser } = useAuth();
+    const [showLoginModal, setShowLoginModal] = useState(false);
     const handleScan = () => {
         navigation.navigate('Scan');
     };
     useEffect(() => {
-        // fetchCountries();
-        // fetchWineTypes();
-        // fetchGrapeTypes();
         fetchTrending();
-        if (user) { fetchUserRecommendations() }
-
-        console.log("user details", user)
     }, []);
+    useEffect(() => {
+        if (user) { fetchUserRecommendations(user?._id) }
+
+    }, [user])
     const fetchUserRecommendations = async (userId) => {
         try {
+            const key = `hasFetchedRecommendations_${userId}`;
+            const alreadyFetched = await AsyncStorage.getItem(key);
+            if (alreadyFetched === 'true') {
+                console.log('Recommendations already fetched for user.');
+                return;
+            }
+            console.log('fetching')
             const searchRes = await axios.get(`${host}/searchHistory/${userId}`);
             const searchHistory = searchRes.data || [];
 
@@ -86,16 +95,28 @@ const HomeScreen = () => {
             }
 
             const recRes = await axios.post(`${host}/api/recommend`, { selectedBottles });
+            console.log("recieved recomendation");
             const recommendations = recRes.data.recommendations || [];
             await AsyncStorage.setItem('wineRecommendations', JSON.stringify(recommendations));
+            await AsyncStorage.setItem(key, 'true'); // Mark as fetched
         } catch (error) {
             console.error('Error fetching personalized recommendations:', error);
         }
     };
+    const handlelogout = async () => {
+        try {
+            //await logoutUser();
+            updateUser(null);
+            navigation.navigate('Login');
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    }
+
     const fetchGuestRecommendations = async (userId) => {
         try {
 
-            let selectedBottles = [...recentSearches, ...wishlistSelections];
+
             const SAMPLE_BOTTLES = [
                 "Château Lafite Rothschild 2015",
                 "Opus One 2016",
@@ -111,62 +132,38 @@ const HomeScreen = () => {
                 "Cloudy Bay Sauvignon Blanc 2020"
             ];
 
-            const recRes = await axios.post(`${host}/api/recommend`, { selectedBottles });
+            const recRes = await axios.post(`${host}/api/recommend`, { selectedBottles: SAMPLE_BOTTLES });
             const recommendations = recRes.data.recommendations || [];
             await AsyncStorage.setItem('wineRecommendations', JSON.stringify(recommendations));
         } catch (error) {
             console.error('Error fetching personalized recommendations:', error);
         }
     };
-
-  
     const fetchTrending = async () => {
         try {
+
+
             const response = await axios.get(`${host}/bottle/trending`);
-            //console.log("resss", response.data)
+
             setTrending(response.data);
+
         } catch (error) {
             console.error("Error fetching trending items:", error);
         }
-    };
-
-
-
-    const fetchBottles = async (query) => {
-        if (!query) {
-            setSearchResults([]);
-            return;
-        }
-        setLoading(true);
-        try {
-            const response = await axios.get(`${host}/bottle/search`, {
-                params: {
-                    q: query,
-                    country: selectedCountry,
-                    winetype: selectedWineType,
-                    grapetype: selectedGrapeType,
-                },
-            });
-            setSearchResults(response.data.data);
-        } catch (error) {
-            console.error("Error fetching search results:", error);
-        }
-        setLoading(false);
-    };
-
-    const debouncedSearch = debounce((query) => {
-        fetchBottles(query);
-    }, 300);
-
-    const handleSearch = (text) => {
-        setSearchText(text);
-        debouncedSearch(text);
     };
 
     const handleBottleClick = (bottleId) => {
         navigation.navigate("Bottle", { id: bottleId });
         console.log("Bottle selected:", bottleId);
     };
+
+    const handleprofile = () => {
+        if (!user) {
+            setShowLoginModal(true);
+            return;
+        }
+        navigation.navigate('Profile')
+    }
 
     return (
         <ScrollView style={styles.container}>
@@ -195,21 +192,25 @@ const HomeScreen = () => {
                     <TouchableOpacity onPress={() => navigation.navigate('Search')}>
                         <Ionicons name="search" size={24} color="gray" style={{ marginRight: 15 }} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                    <TouchableOpacity onPress={handlelogout}>
+                        <Ionicons name="log-out" size={24} color="gray" style={{ marginRight: 15 }} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleprofile}>
+
                         <Ionicons name="person-circle" size={28} color="gray" />
                     </TouchableOpacity>
                 </View>
             </View>
 
-
-            {/* <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
+            {/* 
+            <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
                 <Ionicons name="filter" size={18} />
                 <Text style={styles.filterText}>Toggle Filters</Text>
             </TouchableOpacity> */}
 
             {showFilters && (
                 <View style={styles.filterContainer}>
-                   
+                    {/* Country Filter */}
                     <Text style={styles.filterLabel}>Country</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         {["", ...countries.map(c => c.country)].map((country) => (
@@ -223,7 +224,7 @@ const HomeScreen = () => {
                         ))}
                     </ScrollView>
 
-                 
+                    {/* Wine Type Filter */}
                     <Text style={styles.filterLabel}>Wine Type</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         {["", ...wineTypes.map(w => w.name)].map((type) => (
@@ -237,7 +238,7 @@ const HomeScreen = () => {
                         ))}
                     </ScrollView>
 
-                   
+                    {/* Grape Type Filter */}
                     <Text style={styles.filterLabel}>Grape Type</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         {["", ...grapeTypes.map(g => g.name)].map((type) => (
@@ -251,7 +252,7 @@ const HomeScreen = () => {
                         ))}
                     </ScrollView>
                 </View>
-            )} 
+            )}
 
             {/* Trending Section */}
             <Text style={[styles.filterLabel, { marginTop: 20 }]}>Trending Wines</Text>
@@ -273,6 +274,7 @@ const HomeScreen = () => {
                     </TouchableOpacity>
                 ))}
             </View>
+            <LoginPrompt visible={showLoginModal} onClose={() => setShowLoginModal(false)} />
 
         </ScrollView>
     );
@@ -369,7 +371,7 @@ const styles = StyleSheet.create({
 
     },
     trendingImageBox: {
-        width: '100%',
+
         height: 150,
         borderRadius: 10,
         overflow: 'hidden',
@@ -378,6 +380,7 @@ const styles = StyleSheet.create({
     trendingImage: {
         width: '100%',
         height: '100%',
+        objectFit: 'contain'
     },
     trendingName: {
         fontSize: 14,
