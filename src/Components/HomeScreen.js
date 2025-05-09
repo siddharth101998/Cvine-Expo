@@ -141,16 +141,12 @@ const HomeScreen = () => {
     };
     const fetchTrending = async () => {
         try {
-            const start = Date.now(); // Start timer
-            console.log("Fetching trending bottles...");
+
 
             const response = await axios.get(`${host}/bottle/trending`);
 
-            const end = Date.now(); // End timer
-            const duration = end - start;
-
             setTrending(response.data);
-            console.log("Fetched trending bottles in", duration, "ms");
+
         } catch (error) {
             console.error("Error fetching trending items:", error);
         }

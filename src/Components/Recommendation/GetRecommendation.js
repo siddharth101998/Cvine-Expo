@@ -18,7 +18,21 @@ const GetRecommendation = ({ }) => {
     const [loading, setLoading] = useState(false);
     const [showSearch, setShowSearch] = useState(true);
     const navigation = useNavigation();
+    const usageKey = 'recommendationUsage';
 
+    // Helper to load & reset usage if needed
+    async function loadUsage() {
+        const today = new Date().toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
+        const raw = await AsyncStorage.getItem(usageKey);
+        let usage = raw ? JSON.parse(raw) : { date: today, count: 0 };
+
+        if (usage.date !== today) {
+            usage = { date: today, count: 0 };
+            await AsyncStorage.setItem(usageKey, JSON.stringify(usage));
+        }
+        console.log("usage", usage);
+        return usage;
+    }
     useEffect(() => {
         const fetchStoredRecommendations = async () => {
             try {
@@ -83,18 +97,25 @@ const GetRecommendation = ({ }) => {
             return;
         }
         try {
-            const today = new Date().toISOString().split('T')[0]; // Format: 'YYYY-MM-DD'
-            const usageKey = 'recommendationUsage';
-            const usageData = await AsyncStorage.getItem(usageKey);
-            let usage = usageData ? JSON.parse(usageData) : { date: today, count: 0 };
-            console.log("key", usage)
+            const start = Date.now(); // Start timer
+            console.log("Fetching recomendation bottles...");
+            const today = new Date().toLocaleDateString('en-CA'); // Format: 'YYYY-MM-DD'
+            const usage = await loadUsage();
+            if (usage.count >= 3) {
+                alert('Your free daily recommendations are finished. Upgrade to premium to get more.');
+                return;
+            }
 
             setLoading(true);
             const bottleNames = selectedBottles.map((b) => b.name);
             const response = await axios.post(`${host}/api/recommend`, {
                 selectedBottles: bottleNames,
             });
+
             setGetRecommendations(response.data.recommendations);
+            const end = Date.now(); // End timer
+            const duration = end - start;
+            console.log("Fetched Recommendation in ", duration, "ms");
             await AsyncStorage.setItem(
                 'getwineRecommendations',
                 JSON.stringify(response.data.recommendations)
@@ -117,18 +138,9 @@ const GetRecommendation = ({ }) => {
         console.log("tdoay", today)
         const usageKey = 'recommendationUsage';
         try {
-
-            const usageData = await AsyncStorage.getItem(usageKey);
-            let usage = usageData ? JSON.parse(usageData) : { date: today, count: 0 };
-            console.log("usage", usage);
-            if (usage.date !== today) {
-                // Reset count for a new day
-                usage = { date: today, count: 0 };
-            }
-            console.log("usage", usage);
+            const usage = await loadUsage();
             if (usage.count >= 3) {
-
-                alert('Your free daily recommendations are finished. Upgrade to premium to get more recommendations.');
+                alert('Your free daily recommendations are finished. Upgrade to premium to get more.');
                 return;
             }
 

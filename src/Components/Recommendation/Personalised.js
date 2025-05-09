@@ -1,6 +1,6 @@
 // src/Components/Personalized.js
 import React, { useEffect, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, Image, StyleSheet, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, Image, StyleSheet, View, ActivityIndicator, } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { host } from '../../API-info/apiifno';
@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 const Personalized = ({ }) => {
     const navigation = useNavigation();
     const [recommendations, setRecommendations] = useState([]);
+    const [loading, setLoading] = useState(true);
     useEffect(() => {
         const fetchStoredRecommendations = async () => {
             try {
@@ -45,8 +46,10 @@ const Personalized = ({ }) => {
                 </Text>
             </View>
             {recommendations.length === 0 ? (
-                <Text style={styles.noResultText}>No recommendations yet.</Text>
-            ) : (
+
+                <Text> {loading && <ActivityIndicator size="large" color="#0000ff" style={{ marginTop: 20 }} />}
+                    <Text style={styles.noResultText}>Recommednation are Being Fetched.</Text>
+                </Text>) : (
                 recommendations.map((wine) => (
                     <TouchableOpacity
                         key={wine.bottleId}
