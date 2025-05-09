@@ -18,6 +18,7 @@ import {
     KeyboardAvoidingView,
     Platform,
 } from 'react-native';
+import { signOut } from 'firebase/auth';
 
 // 🔧 Replace this with your actual IP if you're calling a local backend
 
@@ -80,8 +81,8 @@ export const loginUser = async (email, password) => {
 export const logoutUser = async () => {
     try {
         // ↓↓ Skip Firebase sign-out
-        // await signOut(auth);
-        // If you need to notify backend, you could:
+        await signOut();
+        //If you need to notify backend, you could:
         // await axios.post(`${host}/user/logout`);
     } catch (error) {
         throw error;

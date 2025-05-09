@@ -17,6 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import logo from '../../assets/logo.png';
 import LoginPrompt from './LoginPrompt';
+import { logoutUser } from '../../authservice';
+
 import { host } from '../API-info/apiifno';
 import { useAuth } from '../authContext/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -101,6 +103,16 @@ const HomeScreen = () => {
             console.error('Error fetching personalized recommendations:', error);
         }
     };
+    const handlelogout = async () => {
+        try {
+            //await logoutUser();
+            updateUser(null);
+            navigation.navigate('Login');
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    }
+
     const fetchGuestRecommendations = async (userId) => {
         try {
 
@@ -178,7 +190,10 @@ const HomeScreen = () => {
                     <TouchableOpacity onPress={() => navigation.navigate('Search')}>
                         <Ionicons name="search" size={24} color="gray" style={{ marginRight: 15 }} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={handleprofile}>
+                    <TouchableOpacity onPress={handlelogout}>
+                        <Ionicons name="log-out" size={24} color="gray" style={{ marginRight: 15 }} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
                         <Ionicons name="person-circle" size={28} color="gray" />
                     </TouchableOpacity>
                 </View>

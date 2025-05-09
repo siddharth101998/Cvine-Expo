@@ -165,7 +165,7 @@ const LoginScreen = () => {
                         <Text style={styles.buttonText}>Login</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handlelogin}>
-                        <Text style={styles.switchText}>ADon't have an account? Register</Text>
+                        <Text style={styles.switchText}>Don't have an account? Register</Text>
                     </TouchableOpacity>
                 </>
             )

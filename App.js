@@ -18,7 +18,7 @@ import SearchPage from './src/Components/SearchPage';
 import Navbar from './src/Components/NavbarTabs';
 import ProfileScreen from './src/Components/Profile/Profile_Screen';
 import RecommendationMain from './src/Components/Recommendation/Recommendation';
-
+import ProfileSetting from './src/Components/Profile/ProfileSetting';
 const Stack = createNativeStackNavigator();
 
 function ScreenWithNavbar({ children }) {
@@ -75,7 +75,10 @@ export default function App() {
           <Stack.Screen name="Scan" options={{ headerShown: false }}>
             {() => (<ScreenWithNavbar><ScanScreen /></ScreenWithNavbar>)}
           </Stack.Screen>
-        </Stack.Navigator>
+          <Stack.Screen name="ProfileSetting" options={{ headerShown: false }}>
+            {() => (<ScreenWithNavbar><ProfileSetting /></ScreenWithNavbar>)}
+          </Stack.Screen>
+          </Stack.Navigator>
       </NavigationContainer>
     </AuthProvider>
   );
