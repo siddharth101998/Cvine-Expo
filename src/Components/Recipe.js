@@ -17,6 +17,7 @@ Keyboard,
 Dimensions,
 Modal,
 TextInput,
+Alert, // <--- add this
 } from 'react-native';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { storage } from '../../firebase';
@@ -228,6 +229,23 @@ const handleRemoveItem = (index) => {
 };
 
 const handleSubmitRecipe = async () => {
+  // Validation: all fields mandatory, at least one item
+  if (!newRecipe.name.trim()) {
+    Alert.alert('Validation Error', 'Recipe name is required.');
+    return;
+  }
+  if (newRecipe.items.length < 1) {
+    Alert.alert('Validation Error', 'Please add at least one ingredient item.');
+    return;
+  }
+  if (newRecipe.bottles.length < 1) {
+    Alert.alert('Validation Error', 'Please select at least one bottle.');
+    return;
+  }
+  if (!newRecipe.method.trim()) {
+    Alert.alert('Validation Error', 'Recipe method is required.');
+    return;
+  }
   try {
     const payload = {
       name: newRecipe.name,
@@ -244,15 +262,13 @@ const handleSubmitRecipe = async () => {
     setNewRecipe({ name: '', items: [], method: '', bottles: [], imageUrl: '' });
     setProfileImageUri(null); // Reset the local preview
     setShowAddRecipe(false);
-
   } catch (error) {
     console.error('Error creating recipe:', error);
   }
   finally {
-  setNewRecipe({ name: '', items: [], method: '', bottles: [], imageUrl: '' });
-  setProfileImageUri(null); // Reset the local preview
+    setNewRecipe({ name: '', items: [], method: '', bottles: [], imageUrl: '' });
+    setProfileImageUri(null); // Reset the local preview
   }
-  
 };
 
 const handleRemoveBottle = (id) => {
@@ -343,7 +359,13 @@ const handleDeleteComment = async (commentId) => {
     await axios.delete(`${host}/recipe/comment/${commentId}`);
     setComments(prev => prev.filter(comment => comment._id !== commentId));
   } catch (error) {
-    console.error('Error deleting comment:', error);
+    if (error.response?.status === 404) {
+      Alert.alert('Comment not found', 'It may have already been deleted.');
+      setComments(prev => prev.filter(comment => comment._id !== commentId));
+    } else {
+      console.error('Error deleting comment:', error);
+      Alert.alert('Error', 'Failed to delete comment. Please try again.');
+    }
   }
 };
 
@@ -514,7 +536,7 @@ return (
       style={styles.createButton}
       onPress={() => setShowAddRecipe(!showAddRecipe)}
     >
-      <Text style={styles.createButtonText}>Create Recipe</Text>
+      <Text style={styles.createButtonText}>Add Your Recipe</Text>
     </TouchableOpacity>
 
     {/* Recipe List */}
@@ -551,35 +573,36 @@ return (
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Create Recipe</Text>
+            <Text style={styles.modalTitle}>Add Your Recipe</Text>
             <TouchableOpacity onPress={() => setShowAddRecipe(false)}>
               <Ionicons name="close" size={24} color="#333" />
             </TouchableOpacity>
           </View>
           <ScrollView>
-          <View style={styles.avatarContainer}>
-        
-    
+      <View style={styles.avatarContainer}>
+        <TouchableOpacity onPress={pickImage}>
+          {profileImageUri ? (
+            <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
+          ) : (
+            <Ionicons name="wine-outline" size={100} color="#B22222" />
+          )}
+        </TouchableOpacity>
+        <Text style={styles.avatarText}>Tap to select image</Text>
       </View>
-       <View style={styles.avatarContainer}>
-              <TouchableOpacity onPress={pickImage}>
-                {profileImageUri ? (
-                  <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
-                ) : (
-                  <Ionicons name="person-circle-outline" size={100} color="#B22222" />
-                )}
-              </TouchableOpacity>
-              <Text style={styles.avatarText}>Tap to select an image</Text>
-          </View>
           <View style={styles.divider} />
             
             {/* Form Fields */}
+            <Text style={styles.inputLabel}>
+              Recipe Name <Text style={styles.requiredIcon}>*</Text>
+            </Text>
             <TextInput
               style={styles.input}
-              placeholder="Recipe Name"
               value={newRecipe.name}
               onChangeText={(t) => setNewRecipe({ ...newRecipe, name: t })}
             />
+            <Text style={styles.inputLabel}>
+              Add Ingredient <Text style={styles.requiredIcon}>*</Text>
+            </Text>
             <View style={styles.row}>
               <TextInput
                 style={[styles.input, { flex: 0.45, marginRight: 8 }]}
@@ -611,11 +634,14 @@ return (
                </View>
              ))}
            </View>
+            <Text style={styles.inputLabel}>
+              Select Bottles <Text style={styles.requiredIcon}>*</Text>
+            </Text>
             <TextInput
               style={styles.input}
-              placeholder="Search Wines..."
               value={bottleSearchText}
               onChangeText={handleSearchbottle}
+              placeholder="Search Wines..."
             />
             {searchResults.length > 0 && (
               <View style={[styles.dropdown, styles.dropdownWrapper]}>
@@ -666,12 +692,15 @@ return (
                 </View>
               ))}
             </ScrollView>
+            <Text style={styles.inputLabel}>
+              Method <Text style={styles.requiredIcon}>*</Text>
+            </Text>
             <TextInput
               style={[styles.input, { height: 100 }]}
-              placeholder="Method"
               multiline
               value={newRecipe.method}
               onChangeText={(t) => setNewRecipe({ ...newRecipe, method: t })}
+              placeholder="Method"
             />
             <TouchableOpacity style={styles.submitButton} onPress={handleSubmitRecipe}>
               <Text style={styles.submitButtonText}>Submit</Text>
@@ -703,32 +732,6 @@ return (
           </View>
           <View style={styles.divider} />
 
-          {/* Modal actions row: like, dislike, save */}
-          <View style={styles.modalActionsRow}>
-            <TouchableOpacity onPress={() => handleLike(selectedRecipe._id)} style={styles.modalAction}>
-              <Ionicons
-                name={selectedRecipe.likedusers.includes(user._id) ? 'thumbs-up' : 'thumbs-up-outline'}
-                size={24}
-                color={selectedRecipe.likedusers.includes(user._id) ? '#e74c3c' : '#777'}
-              />
-              <Text style={styles.modalActionText}>{selectedRecipe.likes}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleDislike(selectedRecipe._id)} style={styles.modalAction}>
-              <Ionicons
-                name={selectedRecipe.dislikedusers.includes(user._id) ? 'thumbs-down' : 'thumbs-down-outline'}
-                size={24}
-                color={selectedRecipe.dislikedusers.includes(user._id) ? '#3498db' : '#777'}
-              />
-              <Text style={styles.modalActionText}>{selectedRecipe.dislikes}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleSave(selectedRecipe._id)} style={styles.modalAction}>
-              <Ionicons
-                name={selectedRecipe.savedusers?.includes(user._id) ? 'bookmark' : 'bookmark-outline'}
-                size={24}
-                color={selectedRecipe.savedusers?.includes(user._id) ? '#2E8B57' : '#777'}
-              />
-            </TouchableOpacity>
-          </View>
           {/* Recommended Badge */}
           {selectedRecipe.expertRecommendation && (
             <View style={styles.badge}>
@@ -818,6 +821,31 @@ return (
               </TouchableOpacity>
             </View>
           </View>
+          <View style={styles.modalActionsRow}>
+            <TouchableOpacity onPress={() => handleLike(selectedRecipe._id)} style={styles.modalAction}>
+              <Ionicons
+                name={selectedRecipe.likedusers.includes(user._id) ? 'thumbs-up' : 'thumbs-up-outline'}
+                size={24}
+                color={selectedRecipe.likedusers.includes(user._id) ? '#e74c3c' : '#777'}
+              />
+              <Text style={styles.modalActionText}>{selectedRecipe.likes}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleDislike(selectedRecipe._id)} style={styles.modalAction}>
+              <Ionicons
+                name={selectedRecipe.dislikedusers.includes(user._id) ? 'thumbs-down' : 'thumbs-down-outline'}
+                size={24}
+                color={selectedRecipe.dislikedusers.includes(user._id) ? '#3498db' : '#777'}
+              />
+              <Text style={styles.modalActionText}>{selectedRecipe.dislikes}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleSave(selectedRecipe._id)} style={styles.modalAction}>
+              <Ionicons
+                name={selectedRecipe.savedusers?.includes(user._id) ? 'bookmark' : 'bookmark-outline'}
+                size={24}
+                color={selectedRecipe.savedusers?.includes(user._id) ? '#2E8B57' : '#777'}
+              />
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       )}
     </View>
@@ -862,7 +890,7 @@ const styles = StyleSheet.create({
   createButton: {
     backgroundColor: '#B22222',
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 100,
     borderRadius: 8,
     alignSelf: 'center',
     marginVertical: 16,
@@ -1256,5 +1284,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     marginTop: 4,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+    color: '#333',
+  },
+  requiredIcon: {
+    color: '#e74c3c',
   },
 });
