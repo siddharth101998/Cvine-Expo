@@ -523,6 +523,7 @@ export const RecipePage = () => {
   };
 
   return (
+
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
@@ -571,6 +572,7 @@ export const RecipePage = () => {
         transparent={true}
         onRequestClose={() => setShowAddRecipe(false)}
       >
+
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -709,6 +711,7 @@ export const RecipePage = () => {
             </ScrollView>
           </View>
         </View>
+
       </Modal>
       <Modal
         visible={modalVisible}
@@ -853,6 +856,7 @@ export const RecipePage = () => {
         </View>
       </Modal>
     </View>
+
   );
 };
 
