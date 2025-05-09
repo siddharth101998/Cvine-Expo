@@ -57,6 +57,7 @@ export default function App() {
           <Tab.Screen name="Scan" component={ScanScreen} />
           <Tab.Screen name="Profile" component={ProfileScreen} />
           <Tab.Screen name="ProfileSetting" component={ProfileSetting} />
+          <Tab.Screen name="UserRecipes" component={UserRecipes} />
         </Tab.Navigator>
       </NavigationContainer>
     </AuthProvider>

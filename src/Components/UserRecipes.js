@@ -4,11 +4,12 @@ import { useAuth } from "../authContext/AuthContext";
 import axios from "axios";
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { host } from '../API-info/apiifno';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const API_BASE_URL = 'http://localhost:5002';
 
-export default function UserRecipes( ) {
+
+export default function UserRecipes() {
     const [userRecipes, setUserRecipes] = useState([]);
     const [savedRecipes, setSavedRecipes] = useState([]);
     const [activeTab, setActiveTab] = useState('my'); // 'my' or 'saved'
@@ -16,12 +17,12 @@ export default function UserRecipes( ) {
     const [selectedRecipe, setSelectedRecipe] = useState(null);
     const [isModalVisible, setIsModalVisible] = useState(false);
     const { user } = useAuth();
-     const navigation = useNavigation();
+    const navigation = useNavigation();
 
     useEffect(() => {
         const fetchUserRecipes = async () => {
             try {
-                const response = await axios.get(`${API_BASE_URL}/recipe/user/${user._id}`);
+                const response = await axios.get(`${host}/recipe/user/${user._id}`);
                 setUserRecipes(response.data);
             } catch (error) {
                 console.error("Error fetching user recipes:", error);
@@ -34,23 +35,23 @@ export default function UserRecipes( ) {
     }, [user._id]);
 
     useEffect(() => {
-      const fetchSaved = async () => {
-        setLoading(true);
-        try {
-          const res = await axios.get(`${API_BASE_URL}/recipe/saved/${user._id}`);
-          setSavedRecipes(res.data);
-        } catch (err) {
-          console.error('Error fetching saved recipes:', err);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchSaved();
+        const fetchSaved = async () => {
+            setLoading(true);
+            try {
+                const res = await axios.get(`${host}/recipe/saved/${user._id}`);
+                setSavedRecipes(res.data);
+            } catch (err) {
+                console.error('Error fetching saved recipes:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchSaved();
     }, [user._id]);
 
     const handleEditRecipe = async () => {
         try {
-            await axios.put(`${API_BASE_URL}/recipe/${selectedRecipe._id}`, selectedRecipe);
+            await axios.put(`${host}/recipe/${selectedRecipe._id}`, selectedRecipe);
             const updatedRecipes = userRecipes.map(recipe =>
                 recipe._id === selectedRecipe._id ? selectedRecipe : recipe
             );
@@ -63,7 +64,7 @@ export default function UserRecipes( ) {
 
     const handleDeleteRecipe = async (recipeId) => {
         try {
-            await axios.delete(`${API_BASE_URL}/recipe/${recipeId}`);
+            await axios.delete(`${host}/recipe/${recipeId}`);
             const updatedRecipes = userRecipes.filter(recipe => recipe._id !== recipeId);
             setUserRecipes(updatedRecipes);
         } catch (error) {
@@ -79,22 +80,22 @@ export default function UserRecipes( ) {
     }
 
     return (
-        <View style={styles.container}> 
-          <View style={styles.tabBar}>
-            <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'my' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('my')}
-            >
-                
-              <Text style={[styles.tabText, activeTab === 'my' && styles.tabTextActive]}>My Recipes</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'saved' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('saved')}
-            >
-              <Text style={[styles.tabText, activeTab === 'saved' && styles.tabTextActive]}>Saved Recipes</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.container}>
+            <View style={styles.tabBar}>
+                <TouchableOpacity
+                    style={[styles.tabButton, activeTab === 'my' && styles.tabButtonActive]}
+                    onPress={() => setActiveTab('my')}
+                >
+
+                    <Text style={[styles.tabText, activeTab === 'my' && styles.tabTextActive]}>My Recipes</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.tabButton, activeTab === 'saved' && styles.tabButtonActive]}
+                    onPress={() => setActiveTab('saved')}
+                >
+                    <Text style={[styles.tabText, activeTab === 'saved' && styles.tabTextActive]}>Saved Recipes</Text>
+                </TouchableOpacity>
+            </View>
             <FlatList
                 data={activeTab === 'my' ? userRecipes : savedRecipes}
                 keyExtractor={(item) => item._id}
@@ -110,20 +111,20 @@ export default function UserRecipes( ) {
                         <Text style={styles.recipeDescription}>Method:</Text>
                         <Text style={styles.methodText}>{item.method}</Text>
                         {activeTab === 'my' && (
-                          <View style={styles.cardButtons}>
-                            <Button
-                              title="Edit"
-                              onPress={() => {
-                                setSelectedRecipe(item);
-                                setIsModalVisible(true);
-                              }}
-                            />
-                            <Button
-                              title="Delete"
-                              onPress={() => handleDeleteRecipe(item._id)}
-                              color="red"
-                            />
-                          </View>
+                            <View style={styles.cardButtons}>
+                                <Button
+                                    title="Edit"
+                                    onPress={() => {
+                                        setSelectedRecipe(item);
+                                        setIsModalVisible(true);
+                                    }}
+                                />
+                                <Button
+                                    title="Delete"
+                                    onPress={() => handleDeleteRecipe(item._id)}
+                                    color="red"
+                                />
+                            </View>
                         )}
                     </View>
                 )}
@@ -283,26 +284,26 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     tabBar: {
-      flexDirection: 'row',
-      marginBottom: 10,
+        flexDirection: 'row',
+        marginBottom: 10,
     },
     tabButton: {
-      flex: 1,
-      paddingVertical: 8,
-      backgroundColor: '#eee',
-      alignItems: 'center',
-      borderRadius: 4,
-      marginHorizontal: 4,
+        flex: 1,
+        paddingVertical: 8,
+        backgroundColor: '#eee',
+        alignItems: 'center',
+        borderRadius: 4,
+        marginHorizontal: 4,
     },
     tabButtonActive: {
-      backgroundColor: '#B22222',
+        backgroundColor: '#B22222',
     },
     tabText: {
-      fontSize: 16,
-      color: '#333',
+        fontSize: 16,
+        color: '#333',
     },
     tabTextActive: {
-      color: '#fff',
-      fontWeight: 'bold',
+        color: '#fff',
+        fontWeight: 'bold',
     },
 });

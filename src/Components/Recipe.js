@@ -537,7 +537,6 @@ export const RecipePage = () => {
   };
 
   return (
-
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
@@ -586,144 +585,150 @@ export const RecipePage = () => {
         transparent={true}
         onRequestClose={() => setShowAddRecipe(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Your Recipe</Text>
-              <TouchableOpacity onPress={() => setShowAddRecipe(false)}>
-                <Ionicons name="close" size={24} color="#333" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView>
-              <View style={styles.avatarContainer}>
-                <TouchableOpacity onPress={pickImage}>
-                  {profileImageUri ? (
-                    <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
-                  ) : (
-                    <Ionicons name="wine-outline" size={100} color="#B22222" />
-                  )}
-                </TouchableOpacity>
-                <Text style={styles.avatarText}>Tap to select image</Text>
-              </View>
-              <View style={styles.divider} />
-
-              {/* Form Fields */}
-              <Text style={styles.inputLabel}>
-                Recipe Name <Text style={styles.requiredIcon}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={newRecipe.name}
-                onChangeText={(t) => setNewRecipe({ ...newRecipe, name: t })}
-              />
-              <Text style={styles.inputLabel}>
-                Add Ingredient <Text style={styles.requiredIcon}>*</Text>
-              </Text>
-              <View style={styles.row}>
-                <TextInput
-                  style={[styles.input, { flex: 0.45, marginRight: 8 }]}
-                  placeholder="Item Name"
-                  value={currentItem.itemName}
-                  onChangeText={(t) => setCurrentItem({ ...currentItem, itemName: t })}
-                />
-                <TextInput
-                  style={[styles.input, { flex: 0.45 }]}
-                  placeholder="Quantity"
-                  value={currentItem.quantity}
-                  onChangeText={(t) => setCurrentItem({ ...currentItem, quantity: t })}
-                />
-                <TouchableOpacity style={styles.smallButton} onPress={handleAddItem}>
-                  <Ionicons name="add-circle" size={28} color="B22222" />
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Add Your Recipe</Text>
+                <TouchableOpacity onPress={() => setShowAddRecipe(false)}>
+                  <Ionicons name="close" size={24} color="#333" />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.subHeader}>Items:</Text>
-              <View style={styles.itemsContainer}>
-                {newRecipe.items.map((it, idx) => (
-                  <View key={idx} style={styles.itemTag}>
-                    <Text style={styles.itemTagText}>{it.itemName}</Text>
-                    {it.quantity ? (
-                      <Text style={styles.itemTagQuantity}>{it.quantity}</Text>
-                    ) : null}
-                    <TouchableOpacity onPress={() => handleRemoveItem(idx)} style={styles.itemTagRemove}>
-                      <Ionicons name="close-circle" size={16} color="#e74c3c" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-              <Text style={styles.inputLabel}>
-                Select Bottles <Text style={styles.requiredIcon}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={bottleSearchText}
-                onChangeText={handleSearchbottle}
-                placeholder="Search Wines..."
-              />
-              {searchResults.length > 0 && (
-                <View style={[styles.dropdown, styles.dropdownWrapper]}>
-                  <ScrollView>
-                    {searchResults.map((b) => (
-                      <TouchableOpacity
-                        key={b._id}
-                        style={styles.dropdownItem}
-                        onPress={() => {
-                          setNewRecipe((prev) => ({
-                            ...prev,
-                            bottles: [
-                              ...prev.bottles,
-                              { id: b._id, name: b.name, imageUrl: b.imageUrl },
-                            ],
-                          }));
-                          setBottleSearchText('');
-                          setSearchResults([]);
-                        }}
-                      >
-                        {b.imageUrl && (
-                          <Image source={{ uri: b.imageUrl }} style={styles.dropdownItemImage} />
-                        )}
-                        <Text style={styles.dropdownItemText}>{b.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+              <ScrollView keyboardShouldPersistTaps="handled">
+                <View style={styles.avatarContainer}>
+                  <TouchableOpacity onPress={pickImage}>
+                    {profileImageUri ? (
+                      <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
+                    ) : (
+                      <Ionicons name="wine-outline" size={100} color="#B22222" />
+                    )}
+                  </TouchableOpacity>
+                  <Text style={styles.avatarText}>Tap to select image</Text>
                 </View>
-              )}
-              <Text style={styles.subHeader}>Selected Bottles:</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.selectedBottleContainer}
-              >
-                {newRecipe.bottles.map((b, i) => (
-                  <View key={i} style={styles.selectedBottleCard}>
-                    <Image source={{ uri: b.imageUrl }} style={styles.selectedBottleCardImage} />
-                    <TouchableOpacity
-                      style={styles.selectedBottleCardRemove}
-                      onPress={() => handleRemoveBottle(b.id)}
-                    >
-                      <Ionicons name="close-circle" size={20} color="#e74c3c" />
-                    </TouchableOpacity>
-                    <Text style={styles.selectedBottleCardName} numberOfLines={1}>
-                      {b.name}
-                    </Text>
+                <View style={styles.divider} />
+
+                {/* Form Fields */}
+                <Text style={styles.inputLabel}>
+                  Recipe Name <Text style={styles.requiredIcon}>*</Text>
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={newRecipe.name}
+                  onChangeText={(t) => setNewRecipe({ ...newRecipe, name: t })}
+                />
+                <Text style={styles.inputLabel}>
+                  Add Ingredient <Text style={styles.requiredIcon}>*</Text>
+                </Text>
+                <View style={styles.row}>
+                  <TextInput
+                    style={[styles.input, { flex: 0.45, marginRight: 8 }]}
+                    placeholder="Item Name"
+                    value={currentItem.itemName}
+                    onChangeText={(t) => setCurrentItem({ ...currentItem, itemName: t })}
+                  />
+                  <TextInput
+                    style={[styles.input, { flex: 0.45 }]}
+                    placeholder="Quantity"
+                    value={currentItem.quantity}
+                    onChangeText={(t) => setCurrentItem({ ...currentItem, quantity: t })}
+                  />
+                  <TouchableOpacity style={styles.smallButton} onPress={handleAddItem}>
+                    <Ionicons name="add-circle" size={28} color="B22222" />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.subHeader}>Items:</Text>
+                <View style={styles.itemsContainer}>
+                  {newRecipe.items.map((it, idx) => (
+                    <View key={idx} style={styles.itemTag}>
+                      <Text style={styles.itemTagText}>{it.itemName}</Text>
+                      {it.quantity ? (
+                        <Text style={styles.itemTagQuantity}>{it.quantity}</Text>
+                      ) : null}
+                      <TouchableOpacity onPress={() => handleRemoveItem(idx)} style={styles.itemTagRemove}>
+                        <Ionicons name="close-circle" size={16} color="#e74c3c" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+                <Text style={styles.inputLabel}>
+                  Select Bottles <Text style={styles.requiredIcon}>*</Text>
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={bottleSearchText}
+                  onChangeText={handleSearchbottle}
+                  placeholder="Search Wines..."
+                />
+                {searchResults.length > 0 && (
+                  <View style={[styles.dropdown, styles.dropdownWrapper]}>
+                    <ScrollView>
+                      {searchResults.map((b) => (
+                        <TouchableOpacity
+                          key={b._id}
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setNewRecipe((prev) => ({
+                              ...prev,
+                              bottles: [
+                                ...prev.bottles,
+                                { id: b._id, name: b.name, imageUrl: b.imageUrl },
+                              ],
+                            }));
+                            setBottleSearchText('');
+                            setSearchResults([]);
+                          }}
+                        >
+                          {b.imageUrl && (
+                            <Image source={{ uri: b.imageUrl }} style={styles.dropdownItemImage} />
+                          )}
+                          <Text style={styles.dropdownItemText}>{b.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
                   </View>
-                ))}
+                )}
+                <Text style={styles.subHeader}>Selected Bottles:</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.selectedBottleContainer}
+                >
+                  {newRecipe.bottles.map((b, i) => (
+                    <View key={i} style={styles.selectedBottleCard}>
+                      <Image source={{ uri: b.imageUrl }} style={styles.selectedBottleCardImage} />
+                      <TouchableOpacity
+                        style={styles.selectedBottleCardRemove}
+                        onPress={() => handleRemoveBottle(b.id)}
+                      >
+                        <Ionicons name="close-circle" size={20} color="#e74c3c" />
+                      </TouchableOpacity>
+                      <Text style={styles.selectedBottleCardName} numberOfLines={1}>
+                        {b.name}
+                      </Text>
+                    </View>
+                  ))}
+                </ScrollView>
+                <Text style={styles.inputLabel}>
+                  Method <Text style={styles.requiredIcon}>*</Text>
+                </Text>
+                <TextInput
+                  style={[styles.input, { height: 100 }]}
+                  multiline
+                  value={newRecipe.method}
+                  onChangeText={(t) => setNewRecipe({ ...newRecipe, method: t })}
+                  placeholder="Method"
+                />
+                <TouchableOpacity style={styles.submitButton} onPress={handleSubmitRecipe}>
+                  <Text style={styles.submitButtonText}>Submit</Text>
+                </TouchableOpacity>
               </ScrollView>
-              <Text style={styles.inputLabel}>
-                Method <Text style={styles.requiredIcon}>*</Text>
-              </Text>
-              <TextInput
-                style={[styles.input, { height: 100 }]}
-                multiline
-                value={newRecipe.method}
-                onChangeText={(t) => setNewRecipe({ ...newRecipe, method: t })}
-                placeholder="Method"
-              />
-              <TouchableOpacity style={styles.submitButton} onPress={handleSubmitRecipe}>
-                <Text style={styles.submitButtonText}>Submit</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
       <Modal
         visible={modalVisible}
@@ -868,7 +873,6 @@ export const RecipePage = () => {
         </View>
       </Modal>
     </View>
-
   );
 };
 
@@ -1065,6 +1069,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 6,
     marginRight: 12,
+    objectFit: 'contain'
   },
   dropdownItemText: {
     fontSize: 16,
@@ -1145,6 +1150,7 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 8,
     marginBottom: 6,
+    objectFit: 'contain'
   },
   selectedBottleCardRemove: {
     position: 'absolute',
