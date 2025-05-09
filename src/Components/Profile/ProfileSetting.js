@@ -7,8 +7,8 @@ import { host } from '../../API-info/apiifno';
 import { useNavigation } from '@react-navigation/native';
 
 const ProfileSetting = () => {
-    const navigation = useNavigation();
-  const { user, updateUser } = useAuth();
+  const navigation = useNavigation();
+  const { user, updateUser, logout } = useAuth();
   const [showPassModal, setShowPassModal] = useState(false);
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -51,7 +51,9 @@ const ProfileSetting = () => {
 
   const handleLogout = () => {
     updateUser(null);
-    navigation.replace('Login');
+    navigation.navigate('Login');
+
+
   };
 
   return (

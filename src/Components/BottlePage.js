@@ -38,20 +38,24 @@ const BottlePage = () => {
         const fetchBottle = async () => {
             try {
                 const response = await axios.get(`${host}/bottle/${id}`);
-                setLoading(false);
+
                 setBottle(response.data.data);
 
                 if (user && response.data?.data?._id) {
                     try {
+
+
+                        const wishlistRes = await axios.get(`${host}/wishlist/${user._id}`);
+                        const wishlist = wishlistRes.data?.bottles || [];
+
+                        const found = wishlist.find(item => item._id === response.data.data._id);
+                        setIsWishlisted(!!found);
+                        setLoading(false);
                         await axios.post(`${host}/searchHistory/`, {
                             userId: user._id,
                             bottle: response.data.data
                         });
 
-                        const wishlistRes = await axios.get(`${host}/wishlist/${user._id}`);
-                        const wishlist = wishlistRes.data?.bottles || [];
-                        const found = wishlist.find(item => item._id === response.data.data._id);
-                        setIsWishlisted(!!found);
                     } catch (err) {
                         console.error('Wishlist or history fetch failed:', err);
                     }

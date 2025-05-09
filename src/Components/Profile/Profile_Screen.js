@@ -8,12 +8,13 @@ const formatDate = iso => {
   const d = new Date(iso);
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
 };
+
 import { useAuth } from '../../authContext/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, } from 'react';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { host } from '../../API-info/apiifno';
 const ProfileScreen = () => {
@@ -39,7 +40,7 @@ const ProfileScreen = () => {
   const handleBottleClick = (bottleId) => {
     navigation.navigate("Bottle", { id: bottleId });
     console.log("Bottle selected:", bottleId);
-};
+  };
 
   // const fetchSearchHistory = async () => {
   //   if (!user) return;
@@ -128,14 +129,14 @@ const ProfileScreen = () => {
       // optionally: send to server to save permanently
     }
   };
-
-  useEffect(() => {
-    // Fetch user data when the component mounts
-    //fetchUser();
-    fetchRecipeCount();
-    fetchWishlist();
-    fetchSearchHistory();
-  }, [user]);
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log("aaagvsucbvjshfbwjhcbskhbvsdjkcscgbhsjkvcbsjcskuvch-------------")
+      fetchRecipeCount();
+      fetchWishlist();
+      fetchSearchHistory();
+    }, [])
+  )
 
   if (!user) {
     return (
@@ -244,20 +245,20 @@ const ProfileScreen = () => {
             // Use Mongoose timestamps (createdAt), fallback to legacy field
             const date = item.createdAt || item.createdat;
             return (
-             <TouchableOpacity onPress={()=> activeTab === 'wishlist'?handleBottleClick(item._id): handleBottleClick(item.bottle._id)}> 
-             <View style={styles.cardItem}>
-                <Image
-                  source={{ uri: item.imageUrl || item.bottle?.imageUrl }}
-                  style={styles.cardImage}
-                  resizeMode="contain"
-                />
-                <Text style={styles.listText} numberOfLines={2}>{name}</Text>
-                {activeTab === 'search' && date && (
-                  <Text style={styles.timeText}>{formatDate(date)}</Text>
-                )}
-              </View>
+              <TouchableOpacity onPress={() => activeTab === 'wishlist' ? handleBottleClick(item._id) : handleBottleClick(item.bottle._id)}>
+                <View style={styles.cardItem}>
+                  <Image
+                    source={{ uri: item.imageUrl || item.bottle?.imageUrl }}
+                    style={styles.cardImage}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.listText} numberOfLines={2}>{name}</Text>
+                  {activeTab === 'search' && date && (
+                    <Text style={styles.timeText}>{formatDate(date)}</Text>
+                  )}
+                </View>
               </TouchableOpacity>
-             
+
 
             );
           }}
