@@ -60,7 +60,8 @@ const ScanScreen = () => {
 
             const downloadUrl = await getDownloadURL(storageRef);
             const res = await axios.post(`${host}/process-image`, { imageUrl: downloadUrl });
-            setWineDetails(res.data);
+            setWineDetails(res.data.length ? res.data : []);
+
         } catch (err) {
             console.error('Upload error:', err);
             Alert.alert('Upload Failed', err.message || 'There was a problem uploading the image.');
@@ -87,15 +88,28 @@ const ScanScreen = () => {
                     <Text style={styles.loadingText}>Scanning your wine...</Text>
                 </View>
             )}
+            {wineDetails && Array.isArray(wineDetails) && wineDetails.length === 0 && (
+                <View style={styles.noResultBox}>
+                    <Text style={styles.noResultText}>
+                        Wine not found. The photo may be blurry or not wine-related.
+                    </Text>
+                </View>
+            )}
             {wineDetails && Array.isArray(wineDetails) && wineDetails.length > 0 && (
                 <View style={styles.listWrapper}>
                     <ScrollView contentContainerStyle={styles.scrollInner}>
-                        <Text style={styles.didYouMeanText}>Did you mean:</Text>
-                        <Text style={styles.highlightedName}>{wineDetails[0].name}?</Text>
+                        <View style={{ display: 'flex', flex: 'row', mb: 5 }}>
+                            <Text>
+                                <Text style={styles.didYouMeanText}>Did you mean: </Text>
+                                <Text style={styles.highlightedName}>{wineDetails[0].name}?</Text>
+                            </Text>
+                        </View>
+
 
                         <View style={styles.cardsWrapper}>
                             {wineDetails.map((bottle, index) => (
-                                <TouchableOpacity onPress={() => handleBottleClick(bottle._id)}
+                                <TouchableOpacity key={bottle._id}
+                                    onPress={() => handleBottleClick(bottle._id)}
                                 >
 
                                     <View key={index} style={styles.card}>
@@ -194,12 +208,14 @@ const styles = StyleSheet.create({
     },
 
     didYouMeanText: {
-        fontSize: 18,
+        fontSize: 15,
         color: '#555',
+        fontStyle: 'italic',
+        marginRight: 5
     },
 
     highlightedName: {
-        fontSize: 20,
+        fontSize: 15,
         fontWeight: 'bold',
         color: '#8B0000',
         marginBottom: 10,
@@ -253,4 +269,18 @@ const styles = StyleSheet.create({
         color: '#333',
         textAlign: 'center',
     },
+    noResultBox: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 40,
+        paddingHorizontal: 20,
+    },
+
+    noResultText: {
+        fontSize: 16,
+        color: '#555',
+        textAlign: 'center',
+        fontStyle: 'italic',
+    }
 });

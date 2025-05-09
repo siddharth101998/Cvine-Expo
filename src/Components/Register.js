@@ -13,22 +13,26 @@ import { registerUser } from '../../authservice'; // Adjust path as needed
 import { useNavigation } from '@react-navigation/native';
 import { host } from '../API-info/apiifno';
 const RegisterScreen = () => {
-    const [firstName, setFirstName] = useState('');
+    const [username, setUsername] = useState('');
+    const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
     const navigation = useNavigation();
 
     const handleRegister = async () => {
-        if (!email || !password || !firstName) {
+        if (!email || !password || !username || !fullName) {
             Alert.alert('Error', 'All fields are required.');
             return;
         }
 
         try {
-            await registerUser(email, password, firstName);
-            Alert.alert('Success', 'Account created successfully!');
-            navigation.navigate('Login'); // Optionally navigate back to login
+            const res = await registerUser(email, password, username, fullName);
+            setUsername('');
+            setFullName('');
+            setEmail('');
+            setPassword('');
+            navigation.navigate('Login');
         } catch (err) {
             Alert.alert('Error', err.message || 'Something went wrong');
         }
@@ -43,9 +47,16 @@ const RegisterScreen = () => {
             <Text style={styles.subtitle}>Create an account to get started!</Text>
 
             <TextInput
-                placeholder="First Name"
-                value={firstName}
-                onChangeText={setFirstName}
+                placeholder="Username"
+                value={username}
+                onChangeText={setUsername}
+                style={styles.input}
+                autoCapitalize="none"
+            />
+            <TextInput
+                placeholder="Full Name"
+                value={fullName}
+                onChangeText={setFullName}
                 style={styles.input}
             />
             <TextInput

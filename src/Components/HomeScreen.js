@@ -42,11 +42,18 @@ const HomeScreen = () => {
         fetchTrending();
     }, []);
     useEffect(() => {
-        if (user) { fetchUserRecommendations() }
+        if (user) { fetchUserRecommendations(user?._id) }
 
     }, [user])
     const fetchUserRecommendations = async (userId) => {
         try {
+            const key = `hasFetchedRecommendations_${userId}`;
+            const alreadyFetched = await AsyncStorage.getItem(key);
+            if (alreadyFetched === 'true') {
+                console.log('Recommendations already fetched for user.');
+                return;
+            }
+            console.log('fetching')
             const searchRes = await axios.get(`${host}/searchHistory/${userId}`);
             const searchHistory = searchRes.data || [];
 
@@ -89,6 +96,7 @@ const HomeScreen = () => {
             console.log("recieved recomendation");
             const recommendations = recRes.data.recommendations || [];
             await AsyncStorage.setItem('wineRecommendations', JSON.stringify(recommendations));
+            await AsyncStorage.setItem(key, 'true'); // Mark as fetched
         } catch (error) {
             console.error('Error fetching personalized recommendations:', error);
         }
@@ -123,7 +131,7 @@ const HomeScreen = () => {
         try {
             console.log("fetching trending");
             const response = await axios.get(`${host}/bottle/trending`);
-            console.log("resss", response.data)
+            //console.log("resss", response.data)
             setTrending(response.data);
         } catch (error) {
             console.error("Error fetching trending items:", error);
@@ -345,6 +353,7 @@ const styles = StyleSheet.create({
 
     },
     trendingImageBox: {
+
         height: 150,
         borderRadius: 10,
         overflow: 'hidden',

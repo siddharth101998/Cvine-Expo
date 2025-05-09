@@ -49,6 +49,7 @@ const SearchPage = () => {
         fetchCountries();
         fetchWineTypes();
         fetchGrapeTypes();
+
     }, []);
     useEffect(() => {
         debouncedSearch(searchText);
@@ -69,6 +70,7 @@ const SearchPage = () => {
                     grapeType: selectedGrapeTypes,
                 },
             });
+
             setSearchResults(response.data.data);
         } catch (error) {
             console.error("Error fetching search results:", error);

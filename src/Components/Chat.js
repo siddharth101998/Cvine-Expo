@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
     View,
     Text,
@@ -12,12 +12,15 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { host } from '../API-info/apiifno';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 //const API_BASE_URL = 'http://localhost:5002'; // Update for production
 
 const ChatScreen = () => {
     const [messages, setMessages] = useState([]); // history of messages
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const scrollViewRef = useRef();
     const exampleQuestions = [
         'What wine pairs well with steak?',
         'Tell me about Pinot Noir.',
@@ -41,6 +44,7 @@ const ChatScreen = () => {
             console.error('Error fetching response:', error);
             const errorMessage = { role: 'assistant', content: 'Error getting response from AI.' };
             setMessages(prev => [...prev, errorMessage]);
+            scrollViewRef.current?.scrollToEnd({ animated: true });
         } finally {
             setLoading(false);
         }
@@ -50,10 +54,11 @@ const ChatScreen = () => {
         sendMessage(question);
     };
     return (
+
         <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={90}
+            keyboardVerticalOffset={9}
         >
             {/* Header */}
             <View style={styles.header}>
@@ -62,8 +67,11 @@ const ChatScreen = () => {
 
             {/* Messages */}
             <ScrollView
+                ref={scrollViewRef}
                 contentContainerStyle={styles.messagesContainer}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
             >
                 {messages.length === 0 && (
                     <View style={styles.exampleContainer}>
@@ -108,12 +116,14 @@ const ChatScreen = () => {
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
+
     );
 };
 
 export default ChatScreen;
 
 const styles = StyleSheet.create({
+
     container: {
         flex: 1,
         backgroundColor: '#fcf8f5',
@@ -181,7 +191,7 @@ const styles = StyleSheet.create({
         color: '#fff',
     },
     inputContainer: {
-        position: 'absolute',
+
         bottom: 0,
         left: 0,
         right: 0,
