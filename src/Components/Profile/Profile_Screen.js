@@ -213,7 +213,7 @@ const ProfileScreen = () => {
             const bottle = activeTab === 'wishlist' ? item : item.bottle;
             return (
               <TouchableOpacity
-                key={bottle._id ?? idx.toString()}
+                key={idx}
                 style={styles.listItem}
                 onPress={() => navigation.navigate('Bottle', { id: bottle._id })}
               >
@@ -364,6 +364,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 8,
     marginRight: 12,
+    objectFit: 'contain'
   },
   listText: {
     fontSize: 16,
