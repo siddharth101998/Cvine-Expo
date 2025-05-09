@@ -51,7 +51,6 @@ const GetRecommendation = ({ }) => {
         fetchStoredRecommendations();
     }, []);
 
-
     const fetchSearchResults = async (query) => {
         if (!query) {
             setSearchResults([]);
@@ -87,7 +86,11 @@ const GetRecommendation = ({ }) => {
     const handleBottleSelect = (bottle) => {
         if (!selectedBottles.find((b) => b._id === bottle._id)) {
             setSelectedBottles([...selectedBottles, bottle]);
+            setSearchText('');
         }
+    };
+    const removeBottle = (id) => {
+        setSelectedBottles(prev => prev.filter(b => b._id !== id));
     };
 
 
@@ -101,7 +104,7 @@ const GetRecommendation = ({ }) => {
             console.log("Fetching recomendation bottles...");
             const today = new Date().toLocaleDateString('en-CA'); // Format: 'YYYY-MM-DD'
             const usage = await loadUsage();
-            if (usage.count >= 3) {
+            if (usage.count >= 4) {
                 alert('Your free daily recommendations are finished. Upgrade to premium to get more.');
                 return;
             }
@@ -139,7 +142,7 @@ const GetRecommendation = ({ }) => {
         const usageKey = 'recommendationUsage';
         try {
             const usage = await loadUsage();
-            if (usage.count >= 3) {
+            if (usage.count >= 4) {
                 alert('Your free daily recommendations are finished. Upgrade to premium to get more.');
                 return;
             }
@@ -196,21 +199,24 @@ const GetRecommendation = ({ }) => {
                                 <Text style={localStyles.addButtonText}>Search Recommendations</Text>
                             </TouchableOpacity>
                         </View>
+                        {selectedBottles.length > 0 && (<ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            {selectedBottles.map(bottle => (
+                                <View key={bottle._id} style={localStyles.selectedBottle}>
+                                    <Image
+                                        source={{ uri: bottle.imageUrl }}
+                                        style={localStyles.selectedBottleImage}
+                                    />
 
-                        {selectedBottles.length > 0 && (
-                            <View style={localStyles.selectedContainer}>
-                                <Text style={localStyles.selectedHeading}>Selected Bottles</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                    {selectedBottles.map((bottle) => (
-                                        <Image
-                                            key={bottle._id}
-                                            source={{ uri: bottle.imageUrl }}
-                                            style={localStyles.selectedBottleImage}
-                                        />
-                                    ))}
-                                </ScrollView>
-                            </View>
-                        )}
+                                    <TouchableOpacity
+                                        style={localStyles.removeIcon}
+                                        onPress={() => removeBottle(bottle._id)}
+                                    >
+                                        <Ionicons name="close-circle" size={20} color="red" />
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                        </ScrollView>)}
+
 
                         <ScrollView style={{ maxHeight: 500 }}>
                             {searchResults.map((item) => (
@@ -372,6 +378,26 @@ const localStyles = StyleSheet.create({
         fontSize: 14,
         color: '#555',
         textAlign: 'center',
+    },
+    selectedBottle: {
+        alignItems: 'center',
+        marginRight: 12,
+        position: 'relative',
+        marginTop: 10   // so the remove icon can sit on top
+    },
+
+    selectedBottleName: {
+        marginTop: 4,
+        fontSize: 12,
+        maxWidth: 60,
+        textAlign: 'center',
+    },
+    removeIcon: {
+        position: 'absolute',
+        top: -5,
+        right: -5,
+        backgroundColor: 'white',
+        borderRadius: 10,
     },
 });
 
