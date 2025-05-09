@@ -383,7 +383,8 @@ const localStyles = StyleSheet.create({
         alignItems: 'center',
         marginRight: 12,
         position: 'relative',
-        marginTop: 10   // so the remove icon can sit on top
+        marginTop: 10, // so the remove icon can sit on top
+        marginBottom: 10
     },
 
     selectedBottleName: {
