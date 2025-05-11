@@ -5,6 +5,8 @@ import { useAuth } from '../../authContext/AuthContext';
 import axios from 'axios';
 import { host } from '../../API-info/apiifno';
 import { useNavigation } from '@react-navigation/native';
+import { logoutUser } from '../../../authservice';
+
 
 const ProfileSetting = () => {
   const navigation = useNavigation();
@@ -49,9 +51,13 @@ const ProfileSetting = () => {
     }
   };
 
-  const handleLogout = () => {
-    updateUser(null);
-    navigation.navigate('Login');
+  const handleLogout = async () => {
+    await logoutUser();
+    logout();
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Login' }],
+    });
 
 
   };
