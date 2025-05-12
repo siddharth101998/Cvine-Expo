@@ -1,41 +1,71 @@
 // src/Components/Personalized.js
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, Image, StyleSheet, View, ActivityIndicator, } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { host } from '../../API-info/apiifno';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../authContext/AuthContext';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 const Personalized = ({ }) => {
     const navigation = useNavigation();
     const [recommendations, setRecommendations] = useState([]);
     const [loading, setLoading] = useState(true);
-    useEffect(() => {
-        const fetchStoredRecommendations = async () => {
-            try {
-                const stored = await AsyncStorage.getItem('wineRecommendations');
-                console.log("stored", stored)
-                if (stored) {
-                    const parsed = JSON.parse(stored);
+    const { user } = useAuth();
+    const loadAllRecommendations = async () => {
+        try {
+            const raw = await AsyncStorage.getItem('wineRecommendations');
+            if (!raw) return [];
 
-                    const seen = new Set();
-                    const unique = parsed.filter((item) => {
-                        if (seen.has(item.bottleId)) {
-                            return false; // skip duplicate
-                        }
-                        seen.add(item.bottleId);
-                        return true; // keep unique
-                    });
+            const parsed = JSON.parse(raw);
 
-                    setRecommendations(unique);
-
-                }
-            } catch (e) {
-                console.error('Failed to load stored recommendations', e);
+            // if it’s already an array, use it
+            if (Array.isArray(parsed)) {
+                return parsed;
             }
-        };
 
-        fetchStoredRecommendations();
-    }, []);
+            // if it’s a lone object { userid, data }, wrap it
+            if (parsed && parsed.userid && parsed.data) {
+                return [parsed];
+            }
+
+            // otherwise, no usable data
+            return [];
+        } catch (e) {
+            console.error('Failed to parse stored recommendations:', e);
+            return [];
+        }
+    };
+    const fetchStoredRecommendations = async () => {
+        try {
+            // const all = await loadAllRecommendations();
+            const raw = await AsyncStorage.getItem('wineRecommendations');
+            const parsed = JSON.parse(raw);
+            const me = parsed.find(entry => entry.userid === user?._id);
+            if (me) {
+                const seen = new Set();
+                const unique = me.data.filter((item) => {
+                    if (seen.has(item.bottleId)) {
+                        return false; // skip duplicate
+                    }
+                    seen.add(item.bottleId);
+                    return true; // keep unique
+                });
+
+                setRecommendations(unique);
+
+            }
+            return;
+
+        } catch (e) {
+            console.error('Failed to load stored recommendations', e);
+        }
+    };
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchStoredRecommendations();
+        }, [])
+    )
+
 
     return (
         <ScrollView style={styles.inner}>

@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { useNavigation } from '@react-navigation/native';
-
+import { useAuth } from '../../authContext/AuthContext';
 import { host } from '../../API-info/apiifno';
 const GetRecommendation = ({ }) => {
     const [searchText, setSearchText] = useState('');
@@ -18,8 +18,10 @@ const GetRecommendation = ({ }) => {
     const [loading, setLoading] = useState(false);
     const [showSearch, setShowSearch] = useState(true);
     const navigation = useNavigation();
-    const usageKey = 'recommendationUsage';
 
+    const storageKey = 'getwineRecommendations';
+    const { user } = useAuth();
+    const usageKey = `recommendationUsage${user?._id}`;
     // Helper to load & reset usage if needed
     async function loadUsage() {
         const today = new Date().toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
@@ -33,14 +35,41 @@ const GetRecommendation = ({ }) => {
         console.log("usage", usage);
         return usage;
     }
+    const loadAllRecommendations = async () => {
+        try {
+            const raw = await AsyncStorage.getItem('getwineRecommendations');
+            if (!raw) return [];
+
+            const parsed = JSON.parse(raw);
+
+            // if it’s already an array, use it
+            if (Array.isArray(parsed)) {
+                return parsed;
+            }
+
+            // if it’s a lone object { userid, data }, wrap it
+            if (parsed && parsed.userid && parsed.data) {
+                return [parsed];
+            }
+
+            // otherwise, no usable data
+            return [];
+        } catch (e) {
+            console.error('Failed to parse stored recommendations:', e);
+            return [];
+        }
+    };
     useEffect(() => {
+        console.log("user", user);
+
         const fetchStoredRecommendations = async () => {
             try {
-                const recstored = await AsyncStorage.getItem('getwineRecommendations');
+                const all = await loadAllRecommendations();
 
-                if (recstored) {
-
-                    setGetRecommendations(JSON.parse(recstored));
+                // find this user’s payload
+                const me = all.find(entry => entry.userid === user?._id);
+                if (me) {
+                    setGetRecommendations(me.data);
                     setShowSearch(false);
                 }
             } catch (e) {
@@ -49,7 +78,7 @@ const GetRecommendation = ({ }) => {
         };
 
         fetchStoredRecommendations();
-    }, []);
+    }, [user?._id]);
 
     const fetchSearchResults = async (query) => {
         if (!query) {
@@ -104,7 +133,7 @@ const GetRecommendation = ({ }) => {
             console.log("Fetching recomendation bottles...");
             const today = new Date().toLocaleDateString('en-CA'); // Format: 'YYYY-MM-DD'
             const usage = await loadUsage();
-            if (usage.count >= 4) {
+            if (usage.count >= 3) {
                 alert('Your free daily recommendations are finished. Upgrade to premium to get more.');
                 return;
             }
@@ -119,10 +148,25 @@ const GetRecommendation = ({ }) => {
             const end = Date.now(); // End timer
             const duration = end - start;
             console.log("Fetched Recommendation in ", duration, "ms");
+            const all = await loadAllRecommendations();
+
+
+
+            // 2) remove any previous entry for this user
+            const filtered = all.filter(entry => entry.userid !== user?._id);
+
+            // 3) add the new one
+            filtered.push({
+                userid: user?._id,
+                data: response.data.recommendations
+            });
+
+            // 4) write back
             await AsyncStorage.setItem(
                 'getwineRecommendations',
-                JSON.stringify(response.data.recommendations)
+                JSON.stringify(filtered)
             );
+
             usage.count += 1;
             await AsyncStorage.setItem(usageKey, JSON.stringify(usage));
             setShowSearch(false);
@@ -142,7 +186,7 @@ const GetRecommendation = ({ }) => {
         const usageKey = 'recommendationUsage';
         try {
             const usage = await loadUsage();
-            if (usage.count >= 4) {
+            if (usage.count >= 3) {
                 alert('Your free daily recommendations are finished. Upgrade to premium to get more.');
                 return;
             }

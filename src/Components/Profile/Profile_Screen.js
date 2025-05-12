@@ -131,7 +131,7 @@ const ProfileScreen = () => {
   };
   useFocusEffect(
     React.useCallback(() => {
-      console.log("aaagvsucbvjshfbwjhcbskhbvsdjkcscgbhsjkvcbsjcskuvch-------------")
+      //console.log("aaagvsucbvjshfbwjhcbskhbvsdjkcscgbhsjkvcbsjcskuvch-------------")
       fetchRecipeCount();
       fetchWishlist();
       fetchSearchHistory();

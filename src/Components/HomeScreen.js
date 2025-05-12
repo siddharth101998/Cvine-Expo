@@ -47,12 +47,40 @@ const HomeScreen = () => {
         if (user) { fetchUserRecommendations(user?._id) }
 
     }, [user])
+    const loadAllRecommendations = async () => {
+        try {
+            const raw = await AsyncStorage.getItem('wineRecommendations');
+            if (!raw) return [];
+
+            const parsed = JSON.parse(raw);
+
+            // if it’s already an array, use it
+            if (Array.isArray(parsed)) {
+                return parsed;
+            }
+
+            // if it’s a lone object { userid, data }, wrap it
+            if (parsed && parsed.userid && parsed.data) {
+                return [parsed];
+            }
+
+            // otherwise, no usable data
+            return [];
+        } catch (e) {
+            console.error('Failed to parse stored recommendations:', e);
+            return [];
+        }
+    };
     const fetchUserRecommendations = async (userId) => {
         try {
-            const key = `hasFetchedRecommendations_${userId}`;
+            const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+            const key = `hasFetchedRecommendations_${user?._id}_${today}`;
+
+
+            // see if we've already fetched today
             const alreadyFetched = await AsyncStorage.getItem(key);
             if (alreadyFetched === 'true') {
-                console.log('Recommendations already fetched for user.');
+                console.log('Recommendations already fetched for user today.');
                 return;
             }
             console.log('fetching')
@@ -97,12 +125,22 @@ const HomeScreen = () => {
             const recRes = await axios.post(`${host}/api/recommend`, { selectedBottles });
             console.log("recieved recomendation");
             const recommendations = recRes.data.recommendations || [];
-            await AsyncStorage.setItem('wineRecommendations', JSON.stringify(recommendations));
+            const all = await loadAllRecommendations();
+            const filtered = all.filter(entry => entry.userid !== user?._id);
+
+            // 3) add the new one
+            filtered.push({
+                userid: user?._id,
+                data: recommendations
+            });
+            await AsyncStorage.setItem('wineRecommendations', JSON.stringify(filtered));
+            console.log("recieved success");
             await AsyncStorage.setItem(key, 'true'); // Mark as fetched
         } catch (error) {
             console.error('Error fetching personalized recommendations:', error);
         }
     };
+
     const handlelogout = async () => {
         try {
             //await logoutUser();
