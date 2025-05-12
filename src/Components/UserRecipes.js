@@ -56,10 +56,16 @@ export default function UserRecipes() {
             try {
                 const response = await axios.get(`${host}/recipe/user/${user._id}`);
                 setUserRecipes(response.data);
-            } catch (error) {
-                console.error("Error fetching user recipes:", error);
+            } catch (err) {
+                if (err.response?.status === 404) {
+                    // no recipes for this user → show an empty list
+                    setUserRecipes([]);
+                } else {
+                    console.error("Error fetching user recipes:", err);
+                    // you can also show a toast or alert here if it’s a real server error
+                }
             }
-        };
+        }
 
         fetchUserRecipes();
     }, [user._id]);
@@ -67,7 +73,7 @@ export default function UserRecipes() {
     useEffect(() => {
         const fetchSaved = async () => {
             try {
-                const res = await axios.get(`${API_BASE_URL}/recipe/saved/${user._id}`);
+                const res = await axios.get(`${host}/recipe/saved/${user._id}`);
                 setSavedRecipes(res.data);
             } catch (err) {
                 console.error('Error fetching saved recipes:', err);
@@ -189,7 +195,7 @@ export default function UserRecipes() {
     };
 
     if (userRecipes.length === 0) {
-        return <Text>No recipes found.</Text>;
+        return <View style={{ margin: 50 }}><Text>No recipes found.</Text></View>
     }
 
     // Filter bottles for search in edit modal
