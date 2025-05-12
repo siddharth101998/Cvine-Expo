@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -8,17 +9,27 @@ import {
   Image,
   LayoutAnimation,
   UIManager,
+  KeyboardAvoidingView,
   Platform,
   Share,
   ScrollView,
+  Keyboard,
   Dimensions,
   Modal,
   TextInput,
+  Alert, // <--- add this
+  TouchableWithoutFeedback,
 } from 'react-native';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { storage } from '../../firebase';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useAuth } from '../authContext/AuthContext';
 import debounce from 'lodash.debounce';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect } from '@react-navigation/native';
+
 
 import { host } from '../API-info/apiifno';
 
@@ -27,27 +38,95 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const RecipePage = () => {
+// Reusable recipe card with improved layout and tap targets
+const RecipeCard = ({ item, onLike, onSave, onDislike, onShare, onPress, userId }) => (
+  <TouchableOpacity style={[styles.card, styles.horizontalCard]} activeOpacity={0.9} onPress={() => onPress(item)}>
+    <View style={styles.cardImageContainerHorizontal}>
+      {item.imageUrl ? (
+        <Image source={{ uri: item.imageUrl }} style={styles.cardImageHorizontal} />
+      ) : (
+        <View style={[styles.cardImagePlaceholder, styles.iconPlaceholder]}>
+          <Ionicons name="wine-outline" size={40} color="#B22222" />
+        </View>
+      )}
+    </View>
+    <View style={styles.cardContent}>
+      <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
+      <Text style={styles.previewText} numberOfLines={2}>
+        {item.method || item.ingredients?.map(i => i.itemName).join(', ')}...
+      </Text>
+      <View style={styles.actionsRow}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => onLike(item._id)}>
+          <Ionicons
+            name={item.likedusers.includes(userId) ? 'thumbs-up' : 'thumbs-up-outline'}
+            size={20}
+            color={item.likedusers.includes(userId) ? '#2E8B57' : '#777'}
+          />
+          <Text style={styles.actionText}>{item.likes}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={() => onDislike(item._id)}>
+          <Ionicons
+            name={item.dislikedusers.includes(userId) ? 'thumbs-down' : 'thumbs-down-outline'}
+            size={20}
+            color={item.dislikedusers.includes(userId) ? '#e74c3c' : '#777'}
+          />
+          <Text style={styles.actionText}>{item.dislikes}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={() => onSave(item._id)}>
+          <Ionicons
+            name={item.savedusers?.includes(userId) ? 'bookmark' : 'bookmark-outline'}
+            size={20}
+            color={item.savedusers?.includes(userId) ? '#2E8B57' : '#777'}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={() => onShare(item)}>
+          <Ionicons name="share-outline" size={20} color="#777" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  </TouchableOpacity>
+);
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+export const RecipePage = () => {
   const { user } = useAuth();
   const [recipes, setRecipes] = useState([]);
   const [expandedIds, setExpandedIds] = useState([]);
-
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
-
   const [showAddRecipe, setShowAddRecipe] = useState(false);
   const [newRecipe, setNewRecipe] = useState({
     name: '',
     items: [],
     method: '',
     bottles: [], // array of { id, name, image }
+    imageUrl: '',
   });
   const [currentItem, setCurrentItem] = useState({ itemName: '', quantity: '' });
   const [availableBottles, setAvailableBottles] = useState([]);
   const [bottleSearchText, setBottleSearchText] = useState('');
+  const [profileImageUri, setProfileImageUri] = useState(null);
   const [searchResults, setSearchResults] = useState([]);
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState(''); // Add state for newComment
+  const [commentText, setCommentText] = useState('');
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  // Add state for userRecipes and savedRecipes for focus effect
+  const [userRecipes, setUserRecipes] = useState([]);
+  const [savedRecipes, setSavedRecipes] = useState([]);
+
+
+  useEffect(() => {
+    fetchRecipes();
+    fetchBottles();
+  },
+    []);
+
 
   // Hoisted fetchRecipes so it can be called from useEffect
   async function fetchRecipes() {
@@ -66,16 +145,94 @@ const RecipePage = () => {
   const fetchBottles = async () => {
     try {
       const response = await axios.get(`${host}/bottle/`);
-      setAvailableBottles(response.data);
+      setAvailableBottles(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching bottles:', error);
     }
   };
 
+  useFocusEffect(
+    React.useCallback(() => {
+      // Fetch user recipes when the screen comes into focus
+      const fetchUserRecipes = async () => {
+        try {
+          const response = await axios.get(`${host}/recipe/user/${user._id}`);
+          setUserRecipes(response.data);
+        } catch (err) {
+          if (err.response?.status === 404) {
+            // no recipes for this user → show an empty list
+            setUserRecipes([]);
+          } else {
+            console.error("Error fetching user recipes:", err);
+            // you can also show a toast or alert here if it’s a real server error
+          }
+        }
+      };
+
+      // Fetch saved recipes when the screen comes into focus
+      const fetchSaved = async () => {
+        try {
+          const res = await axios.get(`${host}/recipe/saved/${user._id}`);
+          setSavedRecipes(res.data);
+        } catch (err) {
+          console.error('Error fetching saved recipes:', err);
+        }
+      };
+
+      // Optionally, also refresh the main recipes list if needed:
+      fetchRecipes();
+      fetchUserRecipes();
+      fetchSaved();
+    }, [user._id])
+  );
+
+
   useEffect(() => {
-    fetchRecipes();
-    fetchBottles();
-  }, []);
+    if (selectedRecipe) {
+      fetchComments(selectedRecipe._id);
+    }
+  }, [selectedRecipe]);
+
+  // Fetch Comments
+  const fetchComments = async (recipeId) => {
+    setLoadingComments(true);
+    setError(null);
+    console.log('Fetching comments for recipeId:', recipeId);
+    try {
+      const response = await axios.get(`${host}/recipe/comment/${recipeId}`);
+
+      const data = response.data;
+      console.log('Fetched comments:', data);
+      setComments(data.reverse()); // Optional: newest first
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  // Post Comment
+  const postComment = async () => {
+    if (!commentText.trim()) return; // Prevent empty comments
+
+    try {
+      const response = await axios.post(`${host}/recipe/comment`, {
+        recipeId: selectedRecipe._id,
+        userId: user._id,
+        userName: user.name,
+        comment: commentText.trim(),
+      });
+      console.log('Comment posted:', response.data);
+      //setComments((prevComments) => [newComment, ...prevComments]); // Add new comment on top
+      //setCommentText('');
+    } catch (err) {
+      console.error(err);
+      alert('Error posting comment: ' + err.message);
+    }
+  };
+
+
 
   // Debounced bottle search
   const fetchsearchBottles = async (query) => {
@@ -109,7 +266,31 @@ const RecipePage = () => {
     }
   };
 
+  const handleRemoveItem = (index) => {
+    setNewRecipe((prev) => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index),
+    }));
+  };
+
   const handleSubmitRecipe = async () => {
+    // Validation: all fields mandatory, at least one item
+    if (!newRecipe.name.trim()) {
+      Alert.alert('Validation Error', 'Recipe name is required.');
+      return;
+    }
+    if (newRecipe.items.length < 1) {
+      Alert.alert('Validation Error', 'Please add at least one ingredient item.');
+      return;
+    }
+    if (newRecipe.bottles.length < 1) {
+      Alert.alert('Validation Error', 'Please select at least one bottle.');
+      return;
+    }
+    if (!newRecipe.method.trim()) {
+      Alert.alert('Validation Error', 'Recipe method is required.');
+      return;
+    }
     try {
       const payload = {
         name: newRecipe.name,
@@ -118,14 +299,20 @@ const RecipePage = () => {
         method: newRecipe.method,
         userName: user?.username,
         byUserId: user?._id,
+        imageUrl: newRecipe.imageUrl, // Use the downloaded URL for backend submission
       };
+      console.log('Submitting recipe:', payload);
       const response = await axios.post(`${host}/recipe/`, payload);
-      // Prepend the newly created recipe to show it at the top
       setRecipes((prev) => [response.data, ...prev]);
-      setNewRecipe({ name: '', items: [], method: '', bottles: [] });
+      setNewRecipe({ name: '', items: [], method: '', bottles: [], imageUrl: '' });
+      setProfileImageUri(null); // Reset the local preview
       setShowAddRecipe(false);
     } catch (error) {
       console.error('Error creating recipe:', error);
+    }
+    finally {
+      setNewRecipe({ name: '', items: [], method: '', bottles: [], imageUrl: '' });
+      setProfileImageUri(null); // Reset the local preview
     }
   };
 
@@ -135,15 +322,108 @@ const RecipePage = () => {
       bottles: prev.bottles.filter((b) => b.id !== id),
     }));
   };
+  const handleLike = async (id) => {
+    console.log('handleLike called for recipeId:', id);
+    try {
+      const response = await axios.put(`${host}/recipe/like`, {
+        recipeId: id,
+        userId: user._id,
+      });
+      console.log('handleLike response data:', response.data);
+      // Update modal immediately if open
+      if (selectedRecipe?._id === id) {
+        setSelectedRecipe(response.data);
+      }
+      fetchRecipes();
+    } catch (error) {
+      console.error('Error liking recipe:', error);
+    }
+  };
+
+  const handleDislike = async (id) => {
+    try {
+      const response = await axios.put(`${host}/recipe/dislike`, {
+        recipeId: id,
+        userId: user._id,
+      });
+      // Update modal immediately if open
+      if (selectedRecipe?._id === id) {
+        setSelectedRecipe(response.data);
+      }
+      fetchRecipes();
+    } catch (error) {
+      console.error('Error disliking recipe:', error);
+    }
+  };
+
+  const handleSave = async (id) => {
+    console.log('handleSave called for recipeId:', id);
+    try {
+      const response = await axios.put(`${host}/recipe/save`, {
+        recipeId: id,
+        userId: user._id,
+      });
+      console.log('handleSave response data:', response.data);
+      // Update modal immediately if open
+      if (selectedRecipe?._id === id) {
+        setSelectedRecipe(response.data);
+      }
+      fetchRecipes();
+    } catch (error) {
+      console.error('Error saving recipe:', error);
+    }
+  };
 
   const openModal = (item) => {
-    setSelectedRecipe(item);
+    // Enrich bottle entries with imageUrl from fetched bottles list
+    const enrichedBottles = item.bottles.map(b => {
+      const match = (availableBottles || []).find(av => av._id === b.id);
+      return {
+        ...b,
+        imageUrl: match?.imageUrl || b.imageUrl || null,
+      };
+    });
+    setSelectedRecipe({ ...item, bottles: enrichedBottles });
     setModalVisible(true);
   };
 
   const closeModal = () => {
     setModalVisible(false);
     setSelectedRecipe(null);
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return;
+    try {
+      console.log('Adding comment:', user);
+      const response = await axios.post(`${host}/recipe/comment`, {
+        recipeId: selectedRecipe._id,
+        userId: user._id,
+        userName: user.username,
+        comment: newComment.trim(),
+      });
+      console.log('Comment added:', response.data);
+      // Refresh comments so commenterName is populated immediately
+      await fetchComments(selectedRecipe._id);
+      setNewComment('');
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    try {
+      await axios.delete(`${host}/recipe/comment/${commentId}`);
+      setComments(prev => prev.filter(comment => comment._id !== commentId));
+    } catch (error) {
+      if (error.response?.status === 404) {
+        Alert.alert('Comment not found', 'It may have already been deleted.');
+        setComments(prev => prev.filter(comment => comment._id !== commentId));
+      } else {
+        console.error('Error deleting comment:', error);
+        Alert.alert('Error', 'Failed to delete comment. Please try again.');
+      }
+    }
   };
 
 
@@ -154,34 +434,12 @@ const RecipePage = () => {
     );
   };
 
-  const handleLike = async (id) => {
-    try {
-      await axios.put(`http://localhost:5002/recipe/like`, {
-        recipeId: id,
-        userId: user._id,
-      });
-      fetchRecipes();
-    } catch (error) {
-      console.error(error);
-    }
-  };
 
-  const handleDislike = async (id) => {
-    try {
-      await axios.put(`http://localhost:5002/recipe/dislike`, {
-        recipeId: id,
-        userId: user._id,
-      });
-      fetchRecipes();
-    } catch (error) {
-      console.error(error);
-    }
-  };
 
-  const handleSave = (id) => {
-    // TODO: implement save/bookmark logic
-    console.log('Saved recipe', id);
-  };
+  // const handleSave = (id) => {
+  //   // TODO: implement save/bookmark logic
+  //   console.log('Saved recipe', id);
+  // };
 
   const handleShare = (item) => {
     Share.share({
@@ -190,53 +448,131 @@ const RecipePage = () => {
         .join(', ')}\nMethod: ${item.method}`,
     });
   };
+  const pickImage = async () => {
+    // Request camera permissions
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Permission to access camera is required!');
+      return;
+    }
+
+    // Launch camera
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (result.cancelled || result.canceled) {
+      return;
+    }
+
+    // Get the local URI
+    const uri = result.uri ?? result.assets?.[0]?.uri;
+    if (!uri) {
+      console.error('Image URI is undefined');
+      return;
+    }
+
+    // Preview
+    setProfileImageUri(uri);
+
+    // Upload to Firebase
+    try {
+      // Convert to Blob
+      const blob = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = () => resolve(xhr.response);
+        xhr.onerror = () => reject(new Error('Failed to convert URI to Blob'));
+        xhr.responseType = 'blob';
+        xhr.open('GET', uri, true);
+        xhr.send(null);
+      });
+      const fileName = uri.split('/').pop();
+      const storageRef = ref(storage, `recipe_images/${Date.now()}-${fileName}`);
+      await uploadBytes(storageRef, blob);
+      const downloadUrl = await getDownloadURL(storageRef);
+      console.log('Image uploaded successfully:', downloadUrl);
+      setNewRecipe(prev => ({ ...prev, imageUrl: downloadUrl }));
+      blob.close();
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('Upload Failed: ' + (err.message || 'Problem uploading image.'));
+    }
+  };
+
+  const uploadAndProcessImage = async (uri) => {
+    try {
+      if (!uri) throw new Error('Image URI is undefined');
+      console.log('Uploading image:', uri);
+      // Convert the URI to a Blob
+      const blob = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = () => resolve(xhr.response);
+        xhr.onerror = () => reject(new Error('Failed to convert URI to Blob'));
+        xhr.responseType = 'blob';
+        xhr.open('GET', uri, true);
+        xhr.send(null);
+      });
+
+
+      // Upload the Blob to Firebase Storage
+      const fileName = uri.split('/').pop();
+
+      const storageRef = ref(storage, `recipe_images/${Date.now()}-${fileName}`);
+
+      uploadBytes(storageRef, blob).then((snapshot) => {
+        console.log('Uploaded a blob or file!', snapshot);
+
+      });
+
+      // Get the download URL
+      const downloadUrl = await getDownloadURL(storageRef);
+      console.log('Image uploaded successfully:', downloadUrl);
+      // Clean up the Bl
+      blob.close();
+      return downloadUrl;
+    } catch (err) {
+      console.error('Upload error:', err);
+      Alert.alert('Upload Failed', err.message || 'There was a problem uploading the image.');
+    }
+  };
 
   const renderRecipe = ({ item }) => {
     return (
-      <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={() => openModal(item)}>
-        {/* Header */}
-        <View style={styles.headerRow}>
-          <Text style={styles.title} numberOfLines={1}>
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.9}
+        onPress={() => openModal(item)}
+      >
+        {/* Recipe Image */}
+        {item.imageUrl ? (
+          <Image source={{ uri: item.imageUrl }} style={styles.cardImage} />
+        ) : (
+          <View style={styles.cardImagePlaceholder} />
+        )}
+
+        {/* Recipe Details */}
+        <View style={styles.cardContent}>
+          <Text style={styles.cardTitle} numberOfLines={1}>
             {item.name}
           </Text>
-          {item.expertRecommendation && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>Recommended</Text>
-            </View>
-          )}
-        </View>
+          <Text style={styles.cardSubtitle}>By {item.userName}</Text>
 
-        {/* Byline */}
-        <Text style={styles.byline}>By {item.userName}</Text>
-
-        {/* Action buttons */}
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleLike(item._id)}>
-            <Ionicons
-              name={item.likedusers.includes(user._id) ? 'heart' : 'heart-outline'}
-              size={24}
-              color={item.likedusers.includes(user._id) ? '#e74c3c' : '#555'}
-            />
-            <Text style={styles.actionText}>{item.likes}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleSave(item._id)}>
-            <Ionicons
-              name={item.savedusers?.includes(user._id) ? 'bookmark' : 'bookmark-outline'}
-              size={24}
-              color={item.savedusers?.includes(user._id) ? '#2E8B57' : '#555'}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleShare(item)}>
-            <Ionicons name="share-outline" size={24} color="#555" />
-          </TouchableOpacity>
+          {/* Action Buttons */}
+          <View style={styles.cardActions}>
+            <TouchableOpacity onPress={() => handleLike(item._id)}>
+              <Ionicons
+                name={item.likedusers.includes(user._id) ? 'heart' : 'heart-outline'}
+                size={20}
+                color={item.likedusers.includes(user._id) ? '#e74c3c' : '#555'}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleShare(item)}>
+              <Ionicons name="share-outline" size={20} color="#555" />
+            </TouchableOpacity>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -244,124 +580,194 @@ const RecipePage = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.pageTitleContainer}>
-        <Ionicons name="wine-outline" size={24} color="#333" style={{ marginRight: 4 }} />
-        <Text style={styles.pageTitle}>Cocktail</Text>
-        <Text style={styles.pageTitle}> / </Text>
-        <Ionicons name="leaf-outline" size={24} color="#333" style={{ marginHorizontal: 4 }} />
-        <Text style={styles.pageTitle}>Mocktail Recipes</Text>
-      </View>
-      <TouchableOpacity style={styles.createButton} onPress={() => setShowAddRecipe(!showAddRecipe)}>
-        <Text style={styles.createButtonText}>Create</Text>
+      {/* Header */}
+      <LinearGradient
+        colors={['#B22222', '#FF6347']}
+        style={styles.header}
+      >
+        <Text style={styles.headerText}>Cocktail / Mocktail Recipes</Text>
+      </LinearGradient>
+
+      {/* Create Recipe Button */}
+      <TouchableOpacity
+        style={styles.createButton}
+        onPress={() => setShowAddRecipe(!showAddRecipe)}
+      >
+        <Text style={styles.createButtonText}>Add Your Recipe</Text>
       </TouchableOpacity>
+
+      {/* Recipe List */}
+      <FlatList
+        data={recipes}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item }) => (
+          <RecipeCard
+            item={item}
+            onLike={handleLike}
+            onSave={handleSave}
+            onDislike={handleDislike}
+            onShare={handleShare}
+            onPress={openModal}
+            userId={user._id}
+          />
+        )}
+        contentContainerStyle={styles.listContent}
+        numColumns={1}
+        key={1}
+      />
+
+      {/* Create Recipe Modal */}
       <Modal
         visible={showAddRecipe}
         animationType="slide"
         transparent={true}
         onRequestClose={() => setShowAddRecipe(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Create Recipe</Text>
-              <TouchableOpacity onPress={() => setShowAddRecipe(false)}>
-                <Ionicons name="close" size={24} color="#333" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView>
-              <TextInput
-                style={styles.input}
-                placeholder="Recipe Name"
-                value={newRecipe.name}
-                onChangeText={(t) => setNewRecipe({ ...newRecipe, name: t })}
-              />
-              <View style={styles.row}>
-                <TextInput
-                  style={[styles.input, { flex: 0.45, marginRight: 8 }]}
-                  placeholder="Item Name"
-                  value={currentItem.itemName}
-                  onChangeText={(t) => setCurrentItem({ ...currentItem, itemName: t })}
-                />
-                <TextInput
-                  style={[styles.input, { flex: 0.45 }]}
-                  placeholder="Quantity"
-                  value={currentItem.quantity}
-                  onChangeText={(t) => setCurrentItem({ ...currentItem, quantity: t })}
-                />
-                <TouchableOpacity style={styles.smallButton} onPress={handleAddItem}>
-                  <Ionicons name="add-circle" size={28} color="#2E8B57" />
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Add Your Recipe</Text>
+                <TouchableOpacity onPress={() => setShowAddRecipe(false)}>
+                  <Ionicons name="close" size={24} color="#333" />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.subHeader}>Items:</Text>
-              {newRecipe.items.map((it, idx) => (
-                <View key={idx} style={styles.itemRow}>
-                  <Text style={styles.itemText}>{it.itemName}</Text>
-                  <Text style={styles.itemQuantity}>{it.quantity}</Text>
+              <ScrollView keyboardShouldPersistTaps="handled">
+                <View style={styles.avatarContainer}>
+                  <TouchableOpacity onPress={pickImage}>
+                    {profileImageUri ? (
+                      <Image source={{ uri: profileImageUri }} style={styles.avatarLarge} />
+                    ) : (
+                      <Ionicons name="wine-outline" size={100} color="#B22222" />
+                    )}
+                  </TouchableOpacity>
+                  <Text style={styles.avatarText}>Tap to select image</Text>
                 </View>
-              ))}
-              <TextInput
-                style={styles.input}
-                placeholder="Search Wines..."
-                value={bottleSearchText}
-                onChangeText={handleSearchbottle}
-              />
-              {searchResults.length > 0 && (
-                <View style={styles.dropdown}>
-                  <ScrollView style={{ maxHeight: 150 }}>
-                    {searchResults.map((b) => (
-                      <TouchableOpacity
-                        key={b._id}
-                        style={styles.dropdownItem}
-                        onPress={() => {
-                          setNewRecipe((prev) => ({
-                            ...prev,
-                            bottles: [...prev.bottles, { id: b._id, name: b.name, image: b.image }],
-                          }));
-                          setBottleSearchText('');
-                          setSearchResults([]);
-                        }}
-                      >
-                        <Text>{b.name}</Text>
+                <View style={styles.divider} />
+
+                {/* Form Fields */}
+                <Text style={styles.inputLabel}>
+                  Recipe Name <Text style={styles.requiredIcon}>*</Text>
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={newRecipe.name}
+                  onChangeText={(t) => setNewRecipe({ ...newRecipe, name: t })}
+                />
+                <Text style={styles.inputLabel}>
+                  Add Ingredient <Text style={styles.requiredIcon}>*</Text>
+                </Text>
+                <View style={styles.row}>
+                  <TextInput
+                    style={[styles.input, { flex: 0.45, marginRight: 8 }]}
+                    placeholder="Item Name"
+                    value={currentItem.itemName}
+                    onChangeText={(t) => setCurrentItem({ ...currentItem, itemName: t })}
+                  />
+                  <TextInput
+                    style={[styles.input, { flex: 0.45 }]}
+                    placeholder="Quantity"
+                    value={currentItem.quantity}
+                    onChangeText={(t) => setCurrentItem({ ...currentItem, quantity: t })}
+                  />
+                  <TouchableOpacity style={styles.smallButton} onPress={handleAddItem}>
+                    <Ionicons name="add-circle" size={28} color="B22222" />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.subHeader}>Items:</Text>
+                <View style={styles.itemsContainer}>
+                  {newRecipe.items.map((it, idx) => (
+                    <View key={idx} style={styles.itemTag}>
+                      <Text style={styles.itemTagText}>{it.itemName}</Text>
+                      {it.quantity ? (
+                        <Text style={styles.itemTagQuantity}>{it.quantity}</Text>
+                      ) : null}
+                      <TouchableOpacity onPress={() => handleRemoveItem(idx)} style={styles.itemTagRemove}>
+                        <Ionicons name="close-circle" size={16} color="#e74c3c" />
                       </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                    </View>
+                  ))}
                 </View>
-              )}
-              <Text style={styles.subHeader}>Selected Bottles:</Text>
-              <View style={styles.selectedBottleContainer}>
-                {newRecipe.bottles.map((b, i) => (
-                  <View key={i} style={styles.selectedBottle}>
-                    <Image source={{ uri: b.image }} style={styles.selectedBottleImage} />
-                    <Text style={styles.selectedBottleName}>{b.name}</Text>
-                    <TouchableOpacity onPress={() => handleRemoveBottle(b.id)}>
-                      <Ionicons name="close-circle" size={18} color="#B22222" />
-                    </TouchableOpacity>
+                <Text style={styles.inputLabel}>
+                  Select Bottles <Text style={styles.requiredIcon}>*</Text>
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={bottleSearchText}
+                  onChangeText={handleSearchbottle}
+                  placeholder="Search Wines..."
+                />
+                {searchResults.length > 0 && (
+                  <View style={[styles.dropdown, styles.dropdownWrapper]}>
+                    <ScrollView>
+                      {searchResults.map((b) => (
+                        <TouchableOpacity
+                          key={b._id}
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setNewRecipe((prev) => ({
+                              ...prev,
+                              bottles: [
+                                ...prev.bottles,
+                                { id: b._id, name: b.name, imageUrl: b.imageUrl },
+                              ],
+                            }));
+                            setBottleSearchText('');
+                            setSearchResults([]);
+                          }}
+                        >
+                          {b.imageUrl && (
+                            <Image source={{ uri: b.imageUrl }} style={styles.dropdownItemImage} />
+                          )}
+                          <Text style={styles.dropdownItemText}>{b.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
                   </View>
-                ))}
-              </View>
-              <TextInput
-                style={[styles.input, { height: 100 }]}
-                placeholder="Method"
-                multiline
-                value={newRecipe.method}
-                onChangeText={(t) => setNewRecipe({ ...newRecipe, method: t })}
-              />
-              <TouchableOpacity style={styles.submitButton} onPress={handleSubmitRecipe}>
-                <Text style={styles.submitButtonText}>Submit</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
+                )}
+                <Text style={styles.subHeader}>Selected Bottles:</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.selectedBottleContainer}
+                >
+                  {newRecipe.bottles.map((b, i) => (
+                    <View key={i} style={styles.selectedBottleCard}>
+                      <Image source={{ uri: b.imageUrl }} style={styles.selectedBottleCardImage} />
+                      <TouchableOpacity
+                        style={styles.selectedBottleCardRemove}
+                        onPress={() => handleRemoveBottle(b.id)}
+                      >
+                        <Ionicons name="close-circle" size={20} color="#e74c3c" />
+                      </TouchableOpacity>
+                      <Text style={styles.selectedBottleCardName} numberOfLines={1}>
+                        {b.name}
+                      </Text>
+                    </View>
+                  ))}
+                </ScrollView>
+                <Text style={styles.inputLabel}>
+                  Method <Text style={styles.requiredIcon}>*</Text>
+                </Text>
+                <TextInput
+                  style={[styles.input, { height: 100 }]}
+                  multiline
+                  value={newRecipe.method}
+                  onChangeText={(t) => setNewRecipe({ ...newRecipe, method: t })}
+                  placeholder="Method"
+                />
+                <TouchableOpacity style={styles.submitButton} onPress={handleSubmitRecipe}>
+                  <Text style={styles.submitButtonText}>Submit</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
-      <FlatList
-        key={'numCols-2'}
-        data={recipes}
-        keyExtractor={(item) => item._id}
-        renderItem={renderRecipe}
-        contentContainerStyle={styles.listContent}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-      />
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -371,49 +777,67 @@ const RecipePage = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             {selectedRecipe && (
-              <ScrollView>
+              <ScrollView contentContainerStyle={styles.modalScroll}>
+                {/* Header with Back Button */}
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>{selectedRecipe.name}</Text>
-                  <TouchableOpacity onPress={closeModal}>
-                    <Ionicons name="close" size={24} color="#333" />
+                  <TouchableOpacity style={styles.backButton} onPress={closeModal}>
+                    <Ionicons name="arrow-back" size={24} color="#333" />
                   </TouchableOpacity>
                 </View>
+
+                {/* Recipe Title Centered */}
+                <Text style={styles.modalTitleCenter}>{selectedRecipe.name}</Text>
+
+                {/* Recipe image or wine icon placeholder */}
+                {selectedRecipe.imageUrl ? (
+                  <Image
+                    source={{ uri: selectedRecipe.imageUrl }}
+                    style={styles.modalImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={[styles.modalImage, styles.iconPlaceholder]}>
+                    <Ionicons name="wine-outline" size={80} color="#B22222" />
+                  </View>
+                )}
+                <View style={styles.divider} />
+
+                {/* Recommended Badge */}
                 {selectedRecipe.expertRecommendation && (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>Recommended</Text>
                   </View>
                 )}
-                <Text style={styles.byline}>By {selectedRecipe.userName}</Text>
-                <View style={styles.divider} />
-                <Text style={styles.sectionTitle}>Ingredients</Text>
-                {selectedRecipe.ingredients && selectedRecipe.ingredients.length > 0 ? (
-                  selectedRecipe.ingredients.map((ing, i) => (
-                    <View key={i} style={styles.ingredientRow}>
-                      <Ionicons
-                        name="ellipse"
-                        size={6}
-                        color="#555"
-                        style={{ marginRight: 8, marginTop: 10 }}
-                      />
-                      <Text style={styles.sectionText}>
-                        {ing.itemName}{ing.quantity ? `: ${ing.quantity}` : ''}
-                      </Text>
-                    </View>
-                  ))
-                ) : (
-                  <Text style={[styles.sectionText, { fontStyle: 'italic' }]}>
-                    No ingredients provided.
-                  </Text>
-                )}
 
+                {/* Ingredients Section */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Ingredients</Text>
+                  {selectedRecipe.ingredients?.length > 0 ? (
+                    selectedRecipe.ingredients.map((ing, i) => (
+                      <View key={i} style={styles.ingredientRow}>
+                        <Ionicons name="ellipse" size={6} color="#555" style={styles.bulletIcon} />
+                        <Text style={styles.sectionText}>
+                          {ing.itemName}
+                          {ing.quantity ? `: ${ing.quantity}` : ''}
+                        </Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.sectionTextItalic}>No ingredients provided.</Text>
+                  )}
+                </View>
                 <View style={styles.divider} />
 
-                <Text style={styles.sectionTitle}>Method</Text>
-                <Text style={styles.sectionText}>{selectedRecipe.method}</Text>
+                {/* Method Section */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Method</Text>
+                  <Text style={styles.sectionText}>{selectedRecipe.method || 'No method provided.'}</Text>
+                </View>
+                <View style={styles.divider} />
 
+                {/* Bottles Section */}
                 {selectedRecipe.bottles?.length > 0 && (
-                  <>
-                    <View style={styles.divider} />
+                  <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Bottles</Text>
                     <ScrollView
                       horizontal
@@ -422,14 +846,80 @@ const RecipePage = () => {
                     >
                       {selectedRecipe.bottles.map((b, idx) => (
                         <View key={idx} style={styles.bottleItem}>
-                          <Image source={{ uri: b.image }} style={styles.bottleImageModal} />
-                          <Text style={styles.bottleName} numberOfLines={1}>{b.name}</Text>
+                          <Image
+                            source={{ uri: b.imageUrl }}
+                            style={styles.bottleImageModal}
+                            resizeMode="contain"
+                          />
+                          <Text style={styles.bottleName} numberOfLines={2}>
+                            {b.name}
+                          </Text>
                         </View>
                       ))}
                     </ScrollView>
-                  </>
+                  </View>
                 )}
+                <View style={styles.divider} />
 
+                {/* Comments Section */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Comments</Text>
+                  {comments.length > 0 ? (
+                    comments.map((comment, index) => (
+                      <View key={index} style={styles.commentRow}>
+                        <Text style={styles.commentAuthor}>
+                          {comment.commenterName || comment.userName}:
+                        </Text>
+                        <Text style={styles.commentText}>{comment.comment}</Text>
+                        {comment.userId === user._id && (
+                          <TouchableOpacity onPress={() => handleDeleteComment(comment._id)}>
+                            <Ionicons name="trash" size={20} color="red" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.sectionTextItalic}>No comments yet.</Text>
+                  )}
+
+                  {/* Add Comment Input */}
+                  <View style={styles.commentInputRow}>
+                    <TextInput
+                      style={styles.commentInput}
+                      placeholder="Add a comment..."
+                      value={newComment}
+                      onChangeText={setNewComment}
+                    />
+                    <TouchableOpacity onPress={handleAddComment} disabled={!newComment.trim()}>
+                      <Ionicons name="send" size={24} color={newComment.trim() ? '#B22222' : '#ccc'} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.modalActionsRow}>
+                  <TouchableOpacity onPress={() => handleLike(selectedRecipe._id)} style={styles.modalAction}>
+                    <Ionicons
+                      name={selectedRecipe.likedusers.includes(user._id) ? 'thumbs-up' : 'thumbs-up-outline'}
+                      size={24}
+                      color={selectedRecipe.likedusers.includes(user._id) ? '#2E8B57' : '#777'}
+                    />
+                    <Text style={styles.modalActionText}>{selectedRecipe.likes}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDislike(selectedRecipe._id)} style={styles.modalAction}>
+                    <Ionicons
+                      name={selectedRecipe.dislikedusers.includes(user._id) ? 'thumbs-down' : 'thumbs-down-outline'}
+                      size={24}
+                      color={selectedRecipe.dislikedusers.includes(user._id) ? '#e74c3c' : '#777'}
+                    />
+                    <Text style={styles.modalActionText}>{selectedRecipe.dislikes}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleSave(selectedRecipe._id)} style={styles.modalAction}>
+                    <Ionicons
+                      name={selectedRecipe.savedusers?.includes(user._id) ? 'bookmark' : 'bookmark-outline'}
+                      size={24}
+                      color={selectedRecipe.savedusers?.includes(user._id) ? '#2E8B57' : '#777'}
+                    />
+                  </TouchableOpacity>
+                </View>
               </ScrollView>
             )}
           </View>
@@ -442,271 +932,160 @@ const RecipePage = () => {
 export default RecipePage;
 
 const styles = StyleSheet.create({
+  cardImageContainer: {
+    width: '100%',
+    height: 120,
+    backgroundColor: '#eee',
+  },
+  cardContent: {
+    padding: 12,
+  },
+  previewText: {
+    fontSize: 13,
+    color: '#555',
+    marginVertical: 6,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fafafa',
-    paddingHorizontal: 10,
-    paddingTop: 10,
-    top: 65,
+    backgroundColor: '#f4f5fa',
   },
-  pageTitleContainer: {
-    flexDirection: 'row',
+  header: {
+    paddingTop: 50,
+    paddingBottom: 20,
+    backgroundColor: '#B22222',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+
   },
-  pageTitle: {
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 10,
+  headerText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 20,
+  },
+  createButton: {
+    backgroundColor: '#B22222',
+    paddingVertical: 12,
+    paddingHorizontal: 100,
+    borderRadius: 8,
+    alignSelf: 'center',
+    marginVertical: 16,
+  },
+  createButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   listContent: {
-    paddingBottom: 20,
+    paddingHorizontal: 8,
+    paddingBottom: 16,
   },
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
-    flexWrap: 'nowrap',
   },
   card: {
-    width: SCREEN_WIDTH / 2 - 12,
-    height: 150,
+    flex: 1,
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 16,
-    margin: 6,
+    margin: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 3,
-    justifyContent: 'space-between',
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  cardImage: {
+    width: '100%',
+    height: 120,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  cardImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#ddd',
+  },
+  iconPlaceholder: {
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  title: {
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#333',
-    textAlign: 'center',
+  cardContent: {
+    padding: 12,
   },
-  badge: {
-    backgroundColor: '#FF8C00',
-    borderRadius: 12,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  badgeText: {
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  byline: {
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
-    fontSize: 14,
-    color: '#777',
-    marginVertical: 6,
-    textAlign: 'center',
-  },
-  topIngredients: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 6,
-  },
-  ingredientText: {
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
-    fontSize: 12,
-    color: '#555',
-    marginRight: 8,
-  },
-  moreText: {
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
-    fontSize: 12,
-    color: '#555',
-    fontStyle: 'italic',
-  },
-  expandText: {
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
-    fontSize: 14,
-    color: '#2E8B57',
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  section: {
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
-    fontSize: 14,
-    fontWeight: '600',
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
   },
-  sectionText: {
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
-    fontSize: 13,
-    color: '#555',
-    lineHeight: 18,
+  cardSubtitle: {
+    fontSize: 14,
+    color: '#777',
+    marginBottom: 8,
   },
-  bottleImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 8,
-  },
-  bottleScroll: {
-    paddingVertical: 8,
-  },
-  bottleItem: {
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  bottleImageModal: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-  },
-  bottleName: {
-    marginTop: 4,
-    fontSize: 12,
-    color: '#555',
-    maxWidth: 80,
-    textAlign: 'center',
-  },
-  actionsRow: {
+  cardActions: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10,
   },
-  actionButton: {
+  horizontalCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 16,
   },
-  actionText: {
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
-    fontSize: 13,
-    color: '#555',
-    marginLeft: 4,
+  cardImageContainerHorizontal: {
+    width: 100,
+    height: 100,
+    backgroundColor: '#eee',
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+    overflow: 'hidden',
+  },
+  cardImageHorizontal: {
+    width: '100%',
+    height: '100%',
+  },
+  cardContent: {
+    flex: 1,
+    padding: 12,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    width: '85%',
-    maxHeight: '80%',
+    width: '90%',
+    maxHeight: SCREEN_HEIGHT * 0.8,
     backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
+    borderRadius: 16,
+    padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  modalTitle: {
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  closeButton: {
-    marginTop: 16,
-    alignSelf: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#2E8B57',
-    borderRadius: 8,
-  },
-  closeButtonText: {
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
-    color: '#fff',
-    fontWeight: '600',
+    shadowRadius: 8,
+    elevation: 8,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
   },
-  modalStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+  modalTitle: {
     alignItems: 'center',
-    marginVertical: 8,
-  },
-  modalStat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  modalStatText: {
-    marginLeft: 4,
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
-    fontSize: 14,
-    color: '#555',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#ccc',
-    marginVertical: 8,
-  },
-  bottomCloseButton: {
-    marginTop: 16,
-    alignSelf: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#2E8B57',
-    borderRadius: 8,
-  },
-  createButton: {
-    backgroundColor: '#2E8B57',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignSelf: 'center',
-    marginBottom: 12,
-  },
-  createButtonText: {
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  addRecipeForm: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 10,
-    marginBottom: 20,
-    elevation: 3,
-  },
-  dropdown: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    marginTop: 4,
-  },
-  dropdownItem: {
-    padding: 12,
+    fontSize: 22,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#333',
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: '#f9f9f9',
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    padding: 12,
     fontSize: 16,
     marginBottom: 12,
     borderWidth: 1,
@@ -714,6 +1093,44 @@ const styles = StyleSheet.create({
   },
   smallButton: {
     marginLeft: 8,
+  },
+  dropdownWrapper: {
+    position: 'absolute',
+    top: 180,            // adjust as needed to sit below the search input
+    left: 16,
+    right: 16,
+    zIndex: 1000,
+  },
+  dropdown: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    maxHeight: 200,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderColor: '#eee',
+  },
+  dropdownItemImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+    marginRight: 12,
+    objectFit: 'contain'
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#333',
   },
   subHeader: {
     fontSize: 16,
@@ -736,8 +1153,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
   },
+  itemsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginVertical: 8,
+  },
+  itemTag: {
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  itemTagText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  itemTagQuantity: {
+    fontSize: 12,
+    color: '#555',
+    marginLeft: 6,
+  },
+  itemTagRemove: {
+    marginLeft: 6,
+  },
   submitButton: {
-    backgroundColor: '#2E8B57',
+    backgroundColor: '#B22222',
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -748,46 +1192,245 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  itemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 4,
-  },
-  itemQuantity: {
-    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'Roboto',
-    fontSize: 14,
-    color: '#555',
-  },
   selectedBottleContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
-  selectedBottle: {
-    flexDirection: 'row',
+  selectedBottleCard: {
+    width: 100,
+    marginRight: 12,
     alignItems: 'center',
-    // backgroundColor: '#f0f0f0',
-    borderRadius: 16,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    marginRight: 8,
-    marginBottom: 8,
+    position: 'relative',
   },
-  selectedBottleImage: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginRight: 6,
+  selectedBottleCardImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginBottom: 6,
+    objectFit: 'contain'
   },
-  selectedBottleName: {
-    fontSize: 14,
+  selectedBottleCardRemove: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+  },
+  selectedBottleCardName: {
+    fontSize: 12,
+    textAlign: 'center',
     color: '#333',
-    marginRight: 6,
   },
   ingredientRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  bulletIcon: {
+    marginRight: 8,
+  },
+  commentRow: {
+    flexDirection: 'row',
     alignItems: 'flex-start',
+    marginBottom: 10,
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    backgroundColor: '#f5f5f5',
+    padding: 10,
+    borderRadius: 8,
+  },
+  commentAuthor: {
+    fontWeight: 'bold',
+    color: '#B22222',
+    marginRight: 6,
+  },
+  commentText: {
+    flex: 1,
+    color: '#333',
+  },
+  commentInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 16,
+    borderTopWidth: 1,
+    borderColor: '#ddd',
+    paddingTop: 10,
+  },
+  commentInput: {
+    flex: 1,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 10,
+    fontSize: 14,
+    backgroundColor: '#fff',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#ccc',
+    marginVertical: 12,
+  },
+  sectionText: {
+    fontSize: 16,
+    color: '#555',
+    lineHeight: 22,
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  avatarLarge: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: '#B22222',
+    marginBottom: 12,
+  },
+  inlineDetailContainer: {
+    backgroundColor: '#fff',
+    margin: 10,
+    borderRadius: 12,
+    padding: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  inlineTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
+    color: '#333',
+  },
+  inlineSectionHeading: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 4,
+    color: '#2E8B57',
+  },
+  inlineListItem: {
+    fontSize: 14,
+    marginLeft: 8,
+    marginBottom: 2,
+    color: '#555',
+  },
+  inlineText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#555',
+  },
+  inlineEmpty: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: '#999',
+    marginLeft: 8,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 8,
+  },
+  actionText: {
+    marginLeft: 4,
+    fontSize: 14,
+    color: '#777',
+  },
+  inlineBottleScroll: {
+    marginTop: 8,
+  },
+  inlineBottleItem: {
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  inlineBottleImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  customModalContent: {
+    borderRadius: 20,
+    padding: 20,
+    backgroundColor: '#fdfdfd',
+  },
+  modalImage: {
+    width: '100%',
+    height: 200,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    resizeMode: 'cover',
+    marginBottom: 12,
+  },
+  iconPlaceholder: {
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginVertical: 12,
+  },
+  modalAction: {
+    alignItems: 'center',
+  },
+  modalActionText: {
+    fontSize: 14,
+    color: '#333',
+    marginTop: 4,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+    color: '#333',
+  },
+  requiredIcon: {
+    color: '#e74c3c',
+  },
+  bottleScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  bottleItem: {
+    alignItems: 'center',
+    marginRight: 12,
+    width: 100,
+  },
+  bottleImageModal: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    marginBottom: 4,
+    backgroundColor: '#f0f0f0',
+  },
+  bottleName: {
+    fontSize: 14,
+    color: '#333',
+    textAlign: 'center',
+    width: 100,
+    flexWrap: 'wrap',
+  },
+  modalTitleCenter: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#333',
+    marginBottom: 12,
   },
 });

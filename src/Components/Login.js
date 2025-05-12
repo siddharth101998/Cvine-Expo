@@ -44,6 +44,11 @@ const LoginScreen = () => {
                 const res = await loginUser(email, password);
                 //fetchUserRecommendations(res._id);
                 login(res);
+                setFirstName("");
+                setEmail("");
+                setPassword("");
+                setIsRegister(false);
+                setIslogin(false)
                 navigation.navigate("Home");
             }
         } catch (err) {
@@ -165,7 +170,7 @@ const LoginScreen = () => {
                         <Text style={styles.buttonText}>Login</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handlelogin}>
-                        <Text style={styles.switchText}>ADon't have an account? Register</Text>
+                        <Text style={styles.switchText}>Don't have an account? Register</Text>
                     </TouchableOpacity>
                 </>
             )

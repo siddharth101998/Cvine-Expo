@@ -32,22 +32,30 @@ const BottlePage = () => {
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
     useEffect(() => {
+        setLoading(true);
+        setError('');
+
         const fetchBottle = async () => {
             try {
                 const response = await axios.get(`${host}/bottle/${id}`);
-                console.log("bottle page", response.data)
+
                 setBottle(response.data.data);
+
                 if (user && response.data?.data?._id) {
                     try {
+
+
+                        const wishlistRes = await axios.get(`${host}/wishlist/${user._id}`);
+                        const wishlist = wishlistRes.data?.bottles || [];
+
+                        const found = wishlist.find(item => item._id === response.data.data._id);
+                        setIsWishlisted(!!found);
+                        setLoading(false);
                         await axios.post(`${host}/searchHistory/`, {
                             userId: user._id,
                             bottle: response.data.data
                         });
 
-                        const wishlistRes = await axios.get(`${host}/wishlist/${user._id}`);
-                        const wishlist = wishlistRes.data?.bottles || [];
-                        const found = wishlist.find(item => item._id === response.data.data._id);
-                        setIsWishlisted(!!found);
                     } catch (err) {
                         console.error('Wishlist or history fetch failed:', err);
                     }
@@ -69,50 +77,55 @@ const BottlePage = () => {
                 userId: user._id,
                 bottleId: bottle._id
             });
-            console.log("wishlist", !isWishlisted);
+
             setIsWishlisted(prev => !prev);
         } catch (err) {
             console.error('Failed to toggle wishlist:', err);
         }
     };
 
-    if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" color="#b22222" />;
+    //  if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" color="#b22222" />;
     if (error) return <Text style={styles.error}>{error}</Text>;
 
     return (
         <ScrollView style={styles.container}>
-            <View style={styles.centeredContent}>
-                <Text style={styles.bottleName}>{bottle.name}</Text>
-                <View style={styles.imageWrapper}>
-                    <Image source={{ uri: bottle.imageUrl }} style={styles.image} resizeMode="contain" />
-                    <TouchableOpacity onPress={toggleWishlist} style={styles.heartIcon}>
-                        <Ionicons
-                            name={isWishlisted ? 'heart' : 'heart-outline'}
-                            size={28}
-                            color="#B22222"
-                        />
-                    </TouchableOpacity>
+            {loading && <ActivityIndicator style={{ marginVertical: 10 }} />}
+            {!loading && (
+                <View style={styles.centeredContent}>
+                    <Text style={styles.bottleName}>{bottle.name}</Text>
+                    <View style={styles.imageWrapper}>
+                        <Image source={{ uri: bottle.imageUrl }} style={styles.image} resizeMode="contain" />
+                        {user && (<TouchableOpacity onPress={toggleWishlist} style={styles.heartIcon}>
+                            <Ionicons
+                                name={isWishlisted ? 'heart' : 'heart-outline'}
+                                size={28}
+                                color="#B22222"
+                            />
+                        </TouchableOpacity>)}
+
+                    </View>
+
+                    <Text style={styles.descriptionText} numberOfLines={showFullDesc ? undefined : 4}>
+                        {bottle.fullDescription}
+                    </Text>
+
+                    <Text onPress={() => setShowFullDesc(!showFullDesc)} style={styles.readMore}>
+                        {showFullDesc ? 'Show Less' : 'Read More'}
+                    </Text>
+
+                    <View style={styles.infoGrid}>
+                        <View style={styles.infoColumn}><Text style={styles.label}>GRAPE</Text><Text style={styles.value}>{capitalizeWords(bottle.grapeType)}</Text></View>
+                        <View style={styles.infoColumn}><Text style={styles.label}>ALCOHOL</Text><Text style={styles.value}>{bottle.alcoholContent}</Text></View>
+                        <View style={styles.infoColumn}><Text style={styles.label}>BRAND</Text><Text style={styles.value}>{bottle.Winery}</Text></View>
+                        <View style={styles.infoColumn}><Text style={styles.label}>PRICE</Text><Text style={styles.value}>{bottle.price}</Text></View>
+                        <View style={styles.infoColumn}><Text style={styles.label}>RATING</Text><Text style={styles.value}>{bottle.avgRating}</Text></View>
+                        <View style={styles.infoColumn}><Text style={styles.label}>REGION</Text><Text style={styles.value}>{bottle.region}</Text></View>
+                        <View style={styles.infoColumn}><Text style={styles.label}>COUNTRY</Text><Text style={styles.value}>{bottle.country}</Text></View>
+                        <View style={styles.infoColumn}><Text style={styles.label}>TYPE</Text><Text style={styles.value}>{bottle.wineType}</Text></View>
+                    </View>
                 </View>
+            )}
 
-                <Text style={styles.descriptionText} numberOfLines={showFullDesc ? undefined : 4}>
-                    {bottle.fullDescription}
-                </Text>
-
-                <Text onPress={() => setShowFullDesc(!showFullDesc)} style={styles.readMore}>
-                    {showFullDesc ? 'Show Less' : 'Read More'}
-                </Text>
-
-                <View style={styles.infoGrid}>
-                    <View style={styles.infoColumn}><Text style={styles.label}>GRAPE</Text><Text style={styles.value}>{capitalizeWords(bottle.grapeType)}</Text></View>
-                    <View style={styles.infoColumn}><Text style={styles.label}>ALCOHOL</Text><Text style={styles.value}>{bottle.alcoholContent}</Text></View>
-                    <View style={styles.infoColumn}><Text style={styles.label}>BRAND</Text><Text style={styles.value}>{bottle.Winery}</Text></View>
-                    <View style={styles.infoColumn}><Text style={styles.label}>PRICE</Text><Text style={styles.value}>{bottle.price}</Text></View>
-                    <View style={styles.infoColumn}><Text style={styles.label}>RATING</Text><Text style={styles.value}>{bottle.avgRating}</Text></View>
-                    <View style={styles.infoColumn}><Text style={styles.label}>REGION</Text><Text style={styles.value}>{bottle.region}</Text></View>
-                    <View style={styles.infoColumn}><Text style={styles.label}>COUNTRY</Text><Text style={styles.value}>{bottle.country}</Text></View>
-                    <View style={styles.infoColumn}><Text style={styles.label}>TYPE</Text><Text style={styles.value}>{bottle.wineType}</Text></View>
-                </View>
-            </View>
         </ScrollView>
     );
 };
@@ -154,6 +167,7 @@ const styles = StyleSheet.create({
         rowGap: 16,
         columnGap: 16,
         width: '100%',
+        marginBottom: 50
     },
     infoColumn: {
         width: '47%',

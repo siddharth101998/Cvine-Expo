@@ -16,9 +16,12 @@ import debounce from 'lodash.debounce';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import logo from '../../assets/logo.png';
+import LoginPrompt from './LoginPrompt';
+import { logoutUser } from '../../authservice';
 
 import { host } from '../API-info/apiifno';
 import { useAuth } from '../authContext/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const HomeScreen = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [searchText, setSearchText] = useState('');
@@ -33,20 +36,54 @@ const HomeScreen = () => {
     const [showFilters, setShowFilters] = useState(false);
     const navigation = useNavigation();
     const { user, updateUser } = useAuth();
+    const [showLoginModal, setShowLoginModal] = useState(false);
     const handleScan = () => {
         navigation.navigate('Scan');
     };
     useEffect(() => {
-        // fetchCountries();
-        // fetchWineTypes();
-        // fetchGrapeTypes();
         fetchTrending();
-        if (user) { fetchUserRecommendations() }
-
-        console.log("user details", user)
     }, []);
+    useEffect(() => {
+        if (user) { fetchUserRecommendations(user?._id) }
+
+    }, [user])
+    const loadAllRecommendations = async () => {
+        try {
+            const raw = await AsyncStorage.getItem('wineRecommendations');
+            if (!raw) return [];
+
+            const parsed = JSON.parse(raw);
+
+            // if it’s already an array, use it
+            if (Array.isArray(parsed)) {
+                return parsed;
+            }
+
+            // if it’s a lone object { userid, data }, wrap it
+            if (parsed && parsed.userid && parsed.data) {
+                return [parsed];
+            }
+
+            // otherwise, no usable data
+            return [];
+        } catch (e) {
+            console.error('Failed to parse stored recommendations:', e);
+            return [];
+        }
+    };
     const fetchUserRecommendations = async (userId) => {
         try {
+            const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+            const key = `hasFetchedRecommendations_${user?._id}_${today}`;
+
+
+            // see if we've already fetched today
+            const alreadyFetched = await AsyncStorage.getItem(key);
+            if (alreadyFetched === 'true') {
+                console.log('Recommendations already fetched for user today.');
+                return;
+            }
+            console.log('fetching')
             const searchRes = await axios.get(`${host}/searchHistory/${userId}`);
             const searchHistory = searchRes.data || [];
 
@@ -86,16 +123,38 @@ const HomeScreen = () => {
             }
 
             const recRes = await axios.post(`${host}/api/recommend`, { selectedBottles });
+            console.log("recieved recomendation");
             const recommendations = recRes.data.recommendations || [];
-            await AsyncStorage.setItem('wineRecommendations', JSON.stringify(recommendations));
+            const all = await loadAllRecommendations();
+            const filtered = all.filter(entry => entry.userid !== user?._id);
+
+            // 3) add the new one
+            filtered.push({
+                userid: user?._id,
+                data: recommendations
+            });
+            await AsyncStorage.setItem('wineRecommendations', JSON.stringify(filtered));
+            console.log("recieved success");
+            await AsyncStorage.setItem(key, 'true'); // Mark as fetched
         } catch (error) {
             console.error('Error fetching personalized recommendations:', error);
         }
     };
+
+    const handlelogout = async () => {
+        try {
+            //await logoutUser();
+            updateUser(null);
+            navigation.navigate('Login');
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    }
+
     const fetchGuestRecommendations = async (userId) => {
         try {
 
-            let selectedBottles = [...recentSearches, ...wishlistSelections];
+
             const SAMPLE_BOTTLES = [
                 "Château Lafite Rothschild 2015",
                 "Opus One 2016",
@@ -111,87 +170,38 @@ const HomeScreen = () => {
                 "Cloudy Bay Sauvignon Blanc 2020"
             ];
 
-            const recRes = await axios.post(`${host}/api/recommend`, { selectedBottles });
+            const recRes = await axios.post(`${host}/api/recommend`, { selectedBottles: SAMPLE_BOTTLES });
             const recommendations = recRes.data.recommendations || [];
             await AsyncStorage.setItem('wineRecommendations', JSON.stringify(recommendations));
         } catch (error) {
             console.error('Error fetching personalized recommendations:', error);
         }
     };
-
-    const fetchCountries = async () => {
-        try {
-            const response = await axios.get(`${host}/region`);
-            setCountries(response.data);
-        } catch (error) {
-            console.error("Error fetching countries:", error);
-        }
-    };
-
-    const fetchWineTypes = async () => {
-        try {
-            const response = await axios.get(`${host}/winetype`);
-            setWineTypes(response.data);
-        } catch (error) {
-            console.error("Error fetching wine types:", error);
-        }
-    };
-
-    const fetchGrapeTypes = async () => {
-        try {
-            const response = await axios.get(`${host}/grapetype`);
-            setGrapeTypes(response.data);
-        } catch (error) {
-            console.error("Error fetching grape types:", error);
-        }
-    };
     const fetchTrending = async () => {
         try {
+
+
             const response = await axios.get(`${host}/bottle/trending`);
-            console.log("resss", response.data)
+
             setTrending(response.data);
+
         } catch (error) {
             console.error("Error fetching trending items:", error);
         }
-    };
-
-
-
-    const fetchBottles = async (query) => {
-        if (!query) {
-            setSearchResults([]);
-            return;
-        }
-        setLoading(true);
-        try {
-            const response = await axios.get(`${host}/bottle/search`, {
-                params: {
-                    q: query,
-                    country: selectedCountry,
-                    winetype: selectedWineType,
-                    grapetype: selectedGrapeType,
-                },
-            });
-            setSearchResults(response.data.data);
-        } catch (error) {
-            console.error("Error fetching search results:", error);
-        }
-        setLoading(false);
-    };
-
-    const debouncedSearch = debounce((query) => {
-        fetchBottles(query);
-    }, 300);
-
-    const handleSearch = (text) => {
-        setSearchText(text);
-        debouncedSearch(text);
     };
 
     const handleBottleClick = (bottleId) => {
         navigation.navigate("Bottle", { id: bottleId });
         console.log("Bottle selected:", bottleId);
     };
+
+    const handleprofile = () => {
+        if (!user) {
+            setShowLoginModal(true);
+            return;
+        }
+        navigation.navigate('Profile')
+    }
 
     return (
         <ScrollView style={styles.container}>
@@ -220,63 +230,16 @@ const HomeScreen = () => {
                     <TouchableOpacity onPress={() => navigation.navigate('Search')}>
                         <Ionicons name="search" size={24} color="gray" style={{ marginRight: 15 }} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                    {/* <TouchableOpacity onPress={handlelogout}>
+                        <Ionicons name="log-out" size={24} color="gray" style={{ marginRight: 15 }} />
+                    </TouchableOpacity> */}
+                    <TouchableOpacity onPress={handleprofile}>
+
                         <Ionicons name="person-circle" size={28} color="gray" />
                     </TouchableOpacity>
                 </View>
             </View>
 
-            {/* 
-            <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
-                <Ionicons name="filter" size={18} />
-                <Text style={styles.filterText}>Toggle Filters</Text>
-            </TouchableOpacity> */}
-
-            {showFilters && (
-                <View style={styles.filterContainer}>
-                    {/* Country Filter */}
-                    <Text style={styles.filterLabel}>Country</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {["", ...countries.map(c => c.country)].map((country) => (
-                            <TouchableOpacity
-                                key={country}
-                                style={[styles.filterOption, selectedCountry === country && styles.selectedOption]}
-                                onPress={() => setSelectedCountry(country)}
-                            >
-                                <Text>{country || "All"}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-
-                    {/* Wine Type Filter */}
-                    <Text style={styles.filterLabel}>Wine Type</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {["", ...wineTypes.map(w => w.name)].map((type) => (
-                            <TouchableOpacity
-                                key={type}
-                                style={[styles.filterOption, selectedWineType === type && styles.selectedOption]}
-                                onPress={() => setSelectedWineType(type)}
-                            >
-                                <Text>{type || "All"}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-
-                    {/* Grape Type Filter */}
-                    <Text style={styles.filterLabel}>Grape Type</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {["", ...grapeTypes.map(g => g.name)].map((type) => (
-                            <TouchableOpacity
-                                key={type}
-                                style={[styles.filterOption, selectedGrapeType === type && styles.selectedOption]}
-                                onPress={() => setSelectedGrapeType(type)}
-                            >
-                                <Text>{type || "All"}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View>
-            )}
 
             {/* Trending Section */}
             <Text style={[styles.filterLabel, { marginTop: 20 }]}>Trending Wines</Text>
@@ -298,6 +261,7 @@ const HomeScreen = () => {
                     </TouchableOpacity>
                 ))}
             </View>
+            <LoginPrompt visible={showLoginModal} onClose={() => setShowLoginModal(false)} />
 
         </ScrollView>
     );
@@ -394,6 +358,7 @@ const styles = StyleSheet.create({
 
     },
     trendingImageBox: {
+
         height: 150,
         borderRadius: 10,
         overflow: 'hidden',

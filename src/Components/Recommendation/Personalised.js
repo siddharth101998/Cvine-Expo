@@ -1,32 +1,62 @@
 // src/Components/Personalized.js
 import React, { useEffect, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { ScrollView, Text, TouchableOpacity, Image, StyleSheet, View, ActivityIndicator, } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { host } from '../../API-info/apiifno';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../authContext/AuthContext';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 const Personalized = ({ }) => {
     const navigation = useNavigation();
     const [recommendations, setRecommendations] = useState([]);
-    useEffect(() => {
-        const fetchStoredRecommendations = async () => {
-            try {
-                const stored = await AsyncStorage.getItem('wineRecommendations');
-                if (stored) {
-                    console.log("recommmm", JSON.parse(stored))
-                    setRecommendations(JSON.parse(stored));
-                }
-            } catch (e) {
-                console.error('Failed to load stored recommendations', e);
-            }
-        };
+    const [loading, setLoading] = useState(true);
+    const { user } = useAuth();
 
-        fetchStoredRecommendations();
-    }, []);
+    const fetchStoredRecommendations = async () => {
+        try {
+            // const all = await loadAllRecommendations();
+            const raw = await AsyncStorage.getItem('wineRecommendations');
+            const parsed = JSON.parse(raw);
+            const me = parsed.find(entry => entry.userid === user?._id);
+            if (me) {
+                const seen = new Set();
+                const unique = me.data.filter((item) => {
+                    if (seen.has(item.bottleId)) {
+                        return false; // skip duplicate
+                    }
+                    seen.add(item.bottleId);
+                    return true; // keep unique
+                });
+
+                setRecommendations(unique);
+
+            }
+            return;
+
+        } catch (e) {
+            console.error('Failed to load stored recommendations', e);
+        }
+    };
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchStoredRecommendations();
+        }, [])
+    )
+
 
     return (
         <ScrollView style={styles.inner}>
+            <View style={styles.infoBox}>
+                <Ionicons name="information-circle-outline" size={16} color="#555" style={{ marginRight: 4 }} />
+                <Text style={styles.infoText}>
+                    Your personalized recommendations are generated once per day based on your search history and wishlist bottles.
+                </Text>
+            </View>
             {recommendations.length === 0 ? (
-                <Text style={styles.noResultText}>No recommendations yet.</Text>
+                <View style={styles.center}>
+                    {loading && <ActivityIndicator size="large" color="#0000ff" />}
+                    <Text style={styles.noResultText}>Recommendations are Being Fetched.</Text>
+                </View>
             ) : (
                 recommendations.map((wine) => (
                     <TouchableOpacity
@@ -90,6 +120,24 @@ const styles = StyleSheet.create({
     inner: {
         padding: 10,
     },
+    infoBox: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        marginBottom: 12,
+        paddingHorizontal: 4,
+    },
 
+    infoText: {
+        fontSize: 12,
+        color: '#555',
+        fontStyle: 'italic',
+        flex: 1,
+    },
+    
+    center: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
 
 })

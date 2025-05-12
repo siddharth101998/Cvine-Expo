@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
     View,
     Text,
@@ -12,12 +12,15 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { host } from '../API-info/apiifno';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 //const API_BASE_URL = 'http://localhost:5002'; // Update for production
 
 const ChatScreen = () => {
     const [messages, setMessages] = useState([]); // history of messages
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const scrollViewRef = useRef();
     const exampleQuestions = [
         'What wine pairs well with steak?',
         'Tell me about Pinot Noir.',
@@ -41,6 +44,7 @@ const ChatScreen = () => {
             console.error('Error fetching response:', error);
             const errorMessage = { role: 'assistant', content: 'Error getting response from AI.' };
             setMessages(prev => [...prev, errorMessage]);
+            scrollViewRef.current?.scrollToEnd({ animated: true });
         } finally {
             setLoading(false);
         }
@@ -50,17 +54,24 @@ const ChatScreen = () => {
         sendMessage(question);
     };
     return (
+
         <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={90}
+            keyboardVerticalOffset={9}
         >
+            {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.headerText}>Wine AI</Text>
             </View>
+
+            {/* Messages */}
             <ScrollView
+                ref={scrollViewRef}
                 contentContainerStyle={styles.messagesContainer}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
             >
                 {messages.length === 0 && (
                     <View style={styles.exampleContainer}>
@@ -81,7 +92,7 @@ const ChatScreen = () => {
                         key={index}
                         style={[
                             styles.messageBubble,
-                            msg.role === 'user' ? styles.userBubble : styles.aiBubble
+                            msg.role === 'user' ? styles.userBubble : styles.aiBubble,
                         ]}
                     >
                         <Text style={styles.messageText}>{msg.content}</Text>
@@ -92,44 +103,49 @@ const ChatScreen = () => {
                 )}
             </ScrollView>
 
-            {/* Bottom Input */}
+            {/* Input Field */}
             <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.input}
                     placeholder="Type a message..."
                     value={input}
                     onChangeText={setInput}
-
-
                 />
                 <TouchableOpacity style={styles.sendButton} onPress={() => sendMessage(input)}>
                     <Text style={styles.sendButtonText}>Send</Text>
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
+
     );
 };
 
 export default ChatScreen;
 
 const styles = StyleSheet.create({
+
     container: {
         flex: 1,
         backgroundColor: '#fcf8f5',
-    }, header: {
+    },
+    header: {
         paddingTop: 50,
         paddingBottom: 20,
         backgroundColor: '#B22222',
         alignItems: 'center',
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        
     },
     headerText: {
         color: '#fff',
         fontSize: 24,
         fontWeight: 'bold',
+        marginTop:20,
     },
     messagesContainer: {
         padding: 15,
-        paddingBottom: 90, // to avoid keyboard overlap
+        paddingBottom: 90, // To avoid keyboard overlap
     },
     exampleContainer: {
         marginBottom: 20,
@@ -138,37 +154,48 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         marginBottom: 10,
+        color: '#333',
     },
     exampleButton: {
-        backgroundColor: '#f0f0f0',
-        padding: 10,
-        borderRadius: 10,
+        backgroundColor: '#f9f9f9',
+        padding: 12,
+        borderRadius: 12,
         marginBottom: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
     },
     exampleButtonText: {
         fontSize: 16,
-        color: '#333',
+        color: '#555',
     },
     messageBubble: {
         maxWidth: '80%',
-        padding: 10,
-        borderRadius: 10,
+        padding: 12,
+        borderRadius: 16,
         marginBottom: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
     },
     userBubble: {
         alignSelf: 'flex-end',
-        backgroundColor: '#2E8B57',
+        backgroundColor: '#B22222',
     },
     aiBubble: {
         alignSelf: 'flex-start',
-        backgroundColor: '#ccc',
+        backgroundColor: '#B22222',
     },
     messageText: {
-        color: '#fff',
         fontSize: 16,
+        color: '#fff',
     },
     inputContainer: {
-        position: 'absolute',
+
         bottom: 0,
         left: 0,
         right: 0,
@@ -180,11 +207,13 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: '#f9f9f9',
         borderRadius: 25,
         paddingHorizontal: 15,
         fontSize: 16,
         height: 45,
+        borderWidth: 1,
+        borderColor: '#ddd',
     },
     sendButton: {
         backgroundColor: '#B22222',

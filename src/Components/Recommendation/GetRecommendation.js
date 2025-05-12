@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { useNavigation } from '@react-navigation/native';
-
+import { useAuth } from '../../authContext/AuthContext';
 import { host } from '../../API-info/apiifno';
 const GetRecommendation = ({ }) => {
     const [searchText, setSearchText] = useState('');
@@ -19,14 +19,57 @@ const GetRecommendation = ({ }) => {
     const [showSearch, setShowSearch] = useState(true);
     const navigation = useNavigation();
 
+    const storageKey = 'getwineRecommendations';
+    const { user } = useAuth();
+    const usageKey = `recommendationUsage${user?._id}`;
+    // Helper to load & reset usage if needed
+    async function loadUsage() {
+        const today = new Date().toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
+        const raw = await AsyncStorage.getItem(usageKey);
+        let usage = raw ? JSON.parse(raw) : { date: today, count: 0 };
+
+        if (usage.date !== today) {
+            usage = { date: today, count: 0 };
+            await AsyncStorage.setItem(usageKey, JSON.stringify(usage));
+        }
+        console.log("usage", usage);
+        return usage;
+    }
+    const loadAllRecommendations = async () => {
+        try {
+            const raw = await AsyncStorage.getItem('getwineRecommendations');
+            if (!raw) return [];
+
+            const parsed = JSON.parse(raw);
+
+            // if it’s already an array, use it
+            if (Array.isArray(parsed)) {
+                return parsed;
+            }
+
+            // if it’s a lone object { userid, data }, wrap it
+            if (parsed && parsed.userid && parsed.data) {
+                return [parsed];
+            }
+
+            // otherwise, no usable data
+            return [];
+        } catch (e) {
+            console.error('Failed to parse stored recommendations:', e);
+            return [];
+        }
+    };
     useEffect(() => {
+        console.log("user", user);
+
         const fetchStoredRecommendations = async () => {
             try {
-                const recstored = await AsyncStorage.getItem('getwineRecommendations');
+                const all = await loadAllRecommendations();
 
-                if (recstored) {
-
-                    setGetRecommendations(JSON.parse(recstored));
+                // find this user’s payload
+                const me = all.find(entry => entry.userid === user?._id);
+                if (me) {
+                    setGetRecommendations(me.data);
                     setShowSearch(false);
                 }
             } catch (e) {
@@ -35,8 +78,7 @@ const GetRecommendation = ({ }) => {
         };
 
         fetchStoredRecommendations();
-    }, []);
-
+    }, [user?._id]);
 
     const fetchSearchResults = async (query) => {
         if (!query) {
@@ -73,7 +115,11 @@ const GetRecommendation = ({ }) => {
     const handleBottleSelect = (bottle) => {
         if (!selectedBottles.find((b) => b._id === bottle._id)) {
             setSelectedBottles([...selectedBottles, bottle]);
+            setSearchText('');
         }
+    };
+    const removeBottle = (id) => {
+        setSelectedBottles(prev => prev.filter(b => b._id !== id));
     };
 
 
@@ -83,22 +129,44 @@ const GetRecommendation = ({ }) => {
             return;
         }
         try {
-            const today = new Date().toISOString().split('T')[0]; // Format: 'YYYY-MM-DD'
-            const usageKey = 'recommendationUsage';
-            const usageData = await AsyncStorage.getItem(usageKey);
-            let usage = usageData ? JSON.parse(usageData) : { date: today, count: 0 };
-            console.log("key", usage)
+            const start = Date.now(); // Start timer
+            console.log("Fetching recomendation bottles...");
+            const today = new Date().toLocaleDateString('en-CA'); // Format: 'YYYY-MM-DD'
+            const usage = await loadUsage();
+            if (usage.count >= 3) {
+                alert('Your free daily recommendations are finished. Upgrade to premium to get more.');
+                return;
+            }
 
             setLoading(true);
             const bottleNames = selectedBottles.map((b) => b.name);
             const response = await axios.post(`${host}/api/recommend`, {
                 selectedBottles: bottleNames,
             });
+
             setGetRecommendations(response.data.recommendations);
+            const end = Date.now(); // End timer
+            const duration = end - start;
+            console.log("Fetched Recommendation in ", duration, "ms");
+            const all = await loadAllRecommendations();
+
+
+
+            // 2) remove any previous entry for this user
+            const filtered = all.filter(entry => entry.userid !== user?._id);
+
+            // 3) add the new one
+            filtered.push({
+                userid: user?._id,
+                data: response.data.recommendations
+            });
+
+            // 4) write back
             await AsyncStorage.setItem(
                 'getwineRecommendations',
-                JSON.stringify(response.data.recommendations)
+                JSON.stringify(filtered)
             );
+
             usage.count += 1;
             await AsyncStorage.setItem(usageKey, JSON.stringify(usage));
             setShowSearch(false);
@@ -117,18 +185,9 @@ const GetRecommendation = ({ }) => {
         console.log("tdoay", today)
         const usageKey = 'recommendationUsage';
         try {
-
-            const usageData = await AsyncStorage.getItem(usageKey);
-            let usage = usageData ? JSON.parse(usageData) : { date: today, count: 0 };
-            console.log("usage", usage);
-            if (usage.date !== today) {
-                // Reset count for a new day
-                usage = { date: today, count: 0 };
-            }
-            console.log("usage", usage);
-            if (usage.count >= 7) {
-
-                alert('Your free daily recommendations are finished. Upgrade to premium to get more recommendations.');
+            const usage = await loadUsage();
+            if (usage.count >= 3) {
+                alert('Your free daily recommendations are finished. Upgrade to premium to get more.');
                 return;
             }
 
@@ -184,21 +243,24 @@ const GetRecommendation = ({ }) => {
                                 <Text style={localStyles.addButtonText}>Search Recommendations</Text>
                             </TouchableOpacity>
                         </View>
+                        {selectedBottles.length > 0 && (<ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            {selectedBottles.map(bottle => (
+                                <View key={bottle._id} style={localStyles.selectedBottle}>
+                                    <Image
+                                        source={{ uri: bottle.imageUrl }}
+                                        style={localStyles.selectedBottleImage}
+                                    />
 
-                        {selectedBottles.length > 0 && (
-                            <View style={localStyles.selectedContainer}>
-                                <Text style={localStyles.selectedHeading}>Selected Bottles</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                    {selectedBottles.map((bottle) => (
-                                        <Image
-                                            key={bottle._id}
-                                            source={{ uri: bottle.imageUrl }}
-                                            style={localStyles.selectedBottleImage}
-                                        />
-                                    ))}
-                                </ScrollView>
-                            </View>
-                        )}
+                                    <TouchableOpacity
+                                        style={localStyles.removeIcon}
+                                        onPress={() => removeBottle(bottle._id)}
+                                    >
+                                        <Ionicons name="close-circle" size={20} color="red" />
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                        </ScrollView>)}
+
 
                         <ScrollView style={{ maxHeight: 500 }}>
                             {searchResults.map((item) => (
@@ -323,7 +385,7 @@ const localStyles = StyleSheet.create({
         objectFit: 'contain'
     },
     addButton: {
-        backgroundColor: '#2E8B57',
+        backgroundColor: '#B22222',
         padding: 12,
         borderRadius: 8,
         alignItems: 'center',
@@ -360,6 +422,27 @@ const localStyles = StyleSheet.create({
         fontSize: 14,
         color: '#555',
         textAlign: 'center',
+    },
+    selectedBottle: {
+        alignItems: 'center',
+        marginRight: 12,
+        position: 'relative',
+        marginTop: 10, // so the remove icon can sit on top
+        marginBottom: 10
+    },
+
+    selectedBottleName: {
+        marginTop: 4,
+        fontSize: 12,
+        maxWidth: 60,
+        textAlign: 'center',
+    },
+    removeIcon: {
+        position: 'absolute',
+        top: -5,
+        right: -5,
+        backgroundColor: 'white',
+        borderRadius: 10,
     },
 });
 

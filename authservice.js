@@ -1,63 +1,76 @@
-// src/authservice.js
+import { auth } from './firebase';
 
-// ↓↓ Comment out Firebase imports
-// import { auth } from './firebase'; // make sure path is correct
-// import {
-//     createUserWithEmailAndPassword,
-//     signInWithEmailAndPassword,
-//     signOut,
-// } from 'firebase/auth';
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+} from 'firebase/auth';
 import axios from 'axios';
+import {
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    StyleSheet,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+} from 'react-native';
+
 
 // 🔧 Replace this with your actual IP if you're calling a local backend
 
-const host = "http://localhost:5002"
-//const host = "https://cvine.onrender.com"
+// const host = "http://localhost:5002"
+const host = "https://cvine.onrender.com"
 // 🔐 Register User
-export const registerUser = async (email, password, firstName) => {
+export const registerUser = async (email, password, username, fullName) => {
     try {
-        console.log("register started", password);
+        console.log("register started", { email, username, fullName });
 
-        // ↓↓ Skip Firebase user creation
-        // const userCredential = await createUserWithEmailAndPassword(
-        //     auth,
-        //     email,
-        //     password
-        // );
-        // const user = userCredential.user;
-        // console.log("firebase register finished");
+        //↓↓ Skip Firebase user creation
+        const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            email,
+            password
+        );
+        const user = userCredential.user;
+        console.log("firebase register finished");
 
         // 🌐 Call backend to save to MongoDB
         const res = await axios.post(`${host}/user/`, {
             email,
             password,
-            firstName,
+            username,
+            fullName,
         });
+        if (res.ok) { Alert.alert('Success', 'Account created successfully!'); }
 
         return res.data.data;
     } catch (error) {
-        throw error;
+        // AxiosError for 400, 500, etc:
+        if (error.response && error.response.data && error.response.data.message) {
+            Alert.alert('Error', error.response.data.message);
+        } else {
+            Alert.alert('Error', error.message || 'Something went wrong');
+        }
     }
 };
 
 
 export const loginUser = async (email, password) => {
     try {
-        // ↓↓ Skip Firebase sign-in
-        // const userCredential = await signInWithEmailAndPassword(
-        //     auth,
-        //     email,
-        //     password
-        // );
-        // const user = userCredential.user;
 
-        console.log(`${host}/user/login`);
+        console.log(`${host}/user/login`, email);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const firebaseUser = userCredential.user;
+        console.log("Firebase login successful:", firebaseUser.uid);
+
 
         const res = await axios.post(`${host}/user/login`, {
             email,
             password,
         });
-
+        console.log("login res", res.data);
         return res.data.user;
     } catch (error) {
         throw error;
@@ -68,8 +81,8 @@ export const loginUser = async (email, password) => {
 export const logoutUser = async () => {
     try {
         // ↓↓ Skip Firebase sign-out
-        // await signOut(auth);
-        // If you need to notify backend, you could:
+        await signOut(auth);
+        //If you need to notify backend, you could:
         // await axios.post(`${host}/user/logout`);
     } catch (error) {
         throw error;

@@ -6,9 +6,8 @@ import { host } from '../API-info/apiifno';
 import { handleScan } from './Scan';
 import { useAuth } from '../authContext/AuthContext';
 import LoginPrompt from './LoginPrompt';
-const Navbar = () => {
-    const navigation = useNavigation();
-    const route = useRoute();
+const Navbar = ({ state, navigation }) => {
+    const currentRouteName = state.routes[state.index].name;
     const { user } = useAuth();
     const tabs = [
         { name: 'Home', icon: 'home-outline', route: 'Home' },
@@ -22,6 +21,7 @@ const Navbar = () => {
     const handleTabPress = (tab) => {
         if (tab.name === 'Scan') {
             handleScan(navigation);
+
             return;
         }
 
@@ -44,7 +44,7 @@ const Navbar = () => {
                             <Ionicons
                                 name={tab.icon}
                                 size={24}
-                                color={route.name === tab.route ? '#B22222' : 'gray'}
+                                color={currentRouteName === tab.route ? '#B22222' : 'gray'}
                             />
                             <Text style={styles.label}>{tab.name}</Text>
                         </TouchableOpacity>
@@ -58,7 +58,7 @@ const Navbar = () => {
                             <Ionicons
                                 name={tab.icon}
                                 size={24}
-                                color={route.name === tab.route ? '#B22222' : 'gray'}
+                                color={currentRouteName === tab.route ? '#B22222' : 'gray'}
                             />
                             <Text style={styles.label}>{tab.name}</Text>
                         </TouchableOpacity>
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 30,
-        backgroundColor: '#2E8B57',
+        backgroundColor: '#B22222',
         justifyContent: 'center',
         alignItems: 'center',
         elevation: 5,
