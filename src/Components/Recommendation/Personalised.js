@@ -53,10 +53,11 @@ const Personalized = ({ }) => {
                 </Text>
             </View>
             {recommendations.length === 0 ? (
-
-                <Text> {loading && <ActivityIndicator size="large" color="#0000ff" style={{ marginTop: 20 }} />}
-                    <Text style={styles.noResultText}>Recommednation are Being Fetched.</Text>
-                </Text>) : (
+                <View style={styles.center}>
+                    {loading && <ActivityIndicator size="large" color="#0000ff" />}
+                    <Text style={styles.noResultText}>Recommendations are Being Fetched.</Text>
+                </View>
+            ) : (
                 recommendations.map((wine) => (
                     <TouchableOpacity
                         key={wine.bottleId}
@@ -131,6 +132,12 @@ const styles = StyleSheet.create({
         color: '#555',
         fontStyle: 'italic',
         flex: 1,
-    }
+    },
+    
+    center: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
 
 })

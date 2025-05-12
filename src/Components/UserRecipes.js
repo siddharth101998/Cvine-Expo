@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useFocusEffect } from '@react-navigation/native';
 import debounce from 'lodash.debounce';
 import { FlatList, Dimensions, Text, TouchableOpacity, StyleSheet, View, Modal, TextInput, Button, ScrollView, Image, LayoutAnimation, UIManager, KeyboardAvoidingView, Platform } from "react-native";
 import { useAuth } from "../authContext/AuthContext";
@@ -50,6 +51,24 @@ export default function UserRecipes() {
     const [bottleSearch, setBottleSearch] = useState('');
     const [bottleSearchText, setBottleSearchText] = useState('');
     const [searchResults, setSearchResults] = useState([]);
+    // Comments state for modal
+    const [comments, setComments] = useState([]);
+    // Fetch Comments for the selected recipe
+    const fetchComments = async (recipeId) => {
+        try {
+            const response = await axios.get(`${host}/recipe/comment/${recipeId}`);
+            setComments(response.data);  // Set the fetched comments in state
+        } catch (err) {
+            console.error("Error fetching comments:", err);
+        }
+    };
+
+    // Fetch comments when selectedRecipe (for edit modal) changes
+    useEffect(() => {
+        if (selectedRecipe && isModalVisible) {
+            fetchComments(selectedRecipe._id);
+        }
+    }, [selectedRecipe, isModalVisible]);
 
     useEffect(() => {
         const fetchUserRecipes = async () => {
@@ -70,17 +89,19 @@ export default function UserRecipes() {
         fetchUserRecipes();
     }, [user._id]);
 
-    useEffect(() => {
-        const fetchSaved = async () => {
-            try {
-                const res = await axios.get(`${host}/recipe/saved/${user._id}`);
-                setSavedRecipes(res.data);
-            } catch (err) {
-                console.error('Error fetching saved recipes:', err);
-            }
-        };
-        fetchSaved();
-    }, [user._id]);
+    useFocusEffect(
+        React.useCallback(() => {
+            const fetchSaved = async () => {
+                try {
+                    const res = await axios.get(`${host}/recipe/saved/${user._id}`);
+                    setSavedRecipes(res.data);
+                } catch (err) {
+                    console.error('Error fetching saved recipes:', err);
+                }
+            };
+            fetchSaved();
+        }, [user._id])
+    );
 
     // Fetch available bottles from backend
     const fetchBottles = async () => {
@@ -115,11 +136,20 @@ export default function UserRecipes() {
     const handleEditRecipe = async () => {
         try {
             await axios.put(`${host}/recipe/${selectedRecipe._id}`, selectedRecipe);
+    
+            // Update the state of recipes with the edited recipe
             const updatedRecipes = userRecipes.map(recipe =>
                 recipe._id === selectedRecipe._id ? selectedRecipe : recipe
             );
             setUserRecipes(updatedRecipes);
-            setIsModalVisible(false);
+    
+            // Optionally update saved recipes if needed
+            const updatedSavedRecipes = savedRecipes.map(recipe =>
+                recipe._id === selectedRecipe._id ? selectedRecipe : recipe
+            );
+            setSavedRecipes(updatedSavedRecipes);
+    
+            setIsModalVisible(false); // Close modal after update
         } catch (error) {
             console.error("Error updating recipe:", error);
         }
@@ -221,23 +251,23 @@ export default function UserRecipes() {
                 </TouchableOpacity>
             </View>
             <FlatList
-                data={activeTab === 'my' ? userRecipes : savedRecipes}
-                keyExtractor={(item) => item._id}
-                renderItem={({ item }) => (
-                    <RecipeCard
-                        item={item}
-                        onLike={handleLike}
-                        onSave={handleSave}
-                        onDislike={handleDeleteRecipe}
-                        onShare={handleShare}
-                        onPress={item => {
-                            setSelectedRecipe(item);
-                            setDetailModalVisible(true);
-                        }}
-                        userId={user._id}
-                    />
-                )}
-            />
+    data={activeTab === 'my' ? userRecipes : savedRecipes}
+    keyExtractor={(item) => item._id}
+    renderItem={({ item }) => (
+        <RecipeCard
+            item={item}
+            onLike={handleLike}
+            onSave={handleSave}
+            onDislike={handleDeleteRecipe}
+            onShare={handleShare}
+            onPress={item => {
+                setSelectedRecipe(item);
+                setDetailModalVisible(true);
+            }}
+            userId={user._id}
+        />
+    )}
+/>
             {selectedRecipe && (
                 <Modal
                     visible={isModalVisible}
@@ -380,6 +410,20 @@ export default function UserRecipes() {
                                             </TouchableOpacity>
                                         </View>
                                     ))}
+
+                                    {/* Comments Section */}
+                                    <Text style={styles.modalSubtitle}>Comments:</Text>
+                                    {comments.length > 0 ? (
+                                        comments.map((comment, index) => (
+                                            <View key={index} style={styles.commentRow}>
+                                                <Text style={styles.commentAuthor}>{comment.userName}:</Text>
+                                                <Text style={styles.commentText}>{comment.comment}</Text>
+                                            </View>
+                                        ))
+                                    ) : (
+                                        <Text>No comments yet.</Text>
+                                    )}
+
                                 </ScrollView>
                                 <View style={styles.modalButtons}>
                                     <Button title="Save" onPress={handleEditRecipe} />
@@ -765,3 +809,23 @@ const styles = StyleSheet.create({
     },
 });
 
+
+// Add styles for comments section in modal
+const commentStyles = {
+    commentRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        marginBottom: 6,
+    },
+    commentAuthor: {
+        fontWeight: 'bold',
+        marginRight: 4,
+        color: '#2E8B57',
+    },
+    commentText: {
+        flex: 1,
+        color: '#555',
+    },
+};
+
+Object.assign(styles, commentStyles);

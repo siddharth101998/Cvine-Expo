@@ -28,6 +28,8 @@ import { useAuth } from '../authContext/AuthContext';
 import debounce from 'lodash.debounce';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect } from '@react-navigation/native';
+
 
 import { host } from '../API-info/apiifno';
 
@@ -114,6 +116,9 @@ export const RecipePage = () => {
   const [loadingComments, setLoadingComments] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  // Add state for userRecipes and savedRecipes for focus effect
+  const [userRecipes, setUserRecipes] = useState([]);
+  const [savedRecipes, setSavedRecipes] = useState([]);
 
 
   useEffect(() => {
@@ -145,6 +150,35 @@ export const RecipePage = () => {
       console.error('Error fetching bottles:', error);
     }
   };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      // Fetch user recipes when the screen comes into focus
+      const fetchUserRecipes = async () => {
+        try {
+          const response = await axios.get(`${host}/recipe/user/${user._id}`);
+          setUserRecipes(response.data);
+        } catch (err) {
+          console.error("Error fetching user recipes:", err);
+        }
+      };
+
+      // Fetch saved recipes when the screen comes into focus
+      const fetchSaved = async () => {
+        try {
+          const res = await axios.get(`${host}/recipe/saved/${user._id}`);
+          setSavedRecipes(res.data);
+        } catch (err) {
+          console.error('Error fetching saved recipes:', err);
+        }
+      };
+
+      // Optionally, also refresh the main recipes list if needed:
+      fetchRecipes();
+      fetchUserRecipes();
+      fetchSaved();
+    }, [user._id])
+  );
 
 
   useEffect(() => {
