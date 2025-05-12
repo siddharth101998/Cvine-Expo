@@ -70,25 +70,26 @@ export default function UserRecipes() {
         }
     }, [selectedRecipe, isModalVisible]);
 
-    useEffect(() => {
-        const fetchUserRecipes = async () => {
-            try {
-                const response = await axios.get(`${host}/recipe/user/${user._id}`);
-                setUserRecipes(response.data);
-            } catch (err) {
-                if (err.response?.status === 404) {
-                    // no recipes for this user → show an empty list
-                    setUserRecipes([]);
-                } else {
-                    console.error("Error fetching user recipes:", err);
-                    // you can also show a toast or alert here if it’s a real server error
-                }
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchUserRecipes();
+        }))
+
+
+    const fetchUserRecipes = async () => {
+        try {
+            const response = await axios.get(`${host}/recipe/user/${user._id}`);
+            setUserRecipes(response.data);
+        } catch (err) {
+            if (err.response?.status === 404) {
+                // no recipes for this user → show an empty list
+                setUserRecipes([]);
+            } else {
+                console.error("Error fetching user recipes:", err);
+                // you can also show a toast or alert here if it’s a real server error
             }
         }
-
-        fetchUserRecipes();
-    }, [user._id]);
-
+    }
     useFocusEffect(
         React.useCallback(() => {
             const fetchSaved = async () => {
@@ -136,19 +137,19 @@ export default function UserRecipes() {
     const handleEditRecipe = async () => {
         try {
             await axios.put(`${host}/recipe/${selectedRecipe._id}`, selectedRecipe);
-    
+
             // Update the state of recipes with the edited recipe
             const updatedRecipes = userRecipes.map(recipe =>
                 recipe._id === selectedRecipe._id ? selectedRecipe : recipe
             );
             setUserRecipes(updatedRecipes);
-    
+
             // Optionally update saved recipes if needed
             const updatedSavedRecipes = savedRecipes.map(recipe =>
                 recipe._id === selectedRecipe._id ? selectedRecipe : recipe
             );
             setSavedRecipes(updatedSavedRecipes);
-    
+
             setIsModalVisible(false); // Close modal after update
         } catch (error) {
             console.error("Error updating recipe:", error);
@@ -251,28 +252,28 @@ export default function UserRecipes() {
                 </TouchableOpacity>
             </View>
             <FlatList
-    data={activeTab === 'my' ? userRecipes : savedRecipes}
-    keyExtractor={(item) => item._id}
-    renderItem={({ item }) => (
-        <RecipeCard
-            item={item}
-            onLike={handleLike}
-            onSave={handleSave}
-            onDislike={handleDeleteRecipe}
-            onShare={handleShare}
-            onPress={item => {
-                setSelectedRecipe(item);
-                setDetailModalVisible(true);
-            }}
-            userId={user._id}
-        />
-    )}
-    ListEmptyComponent={
-<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: '80%' }}>
-    <Text>No recipes found.</Text>
-</View>
-    }
-/>
+                data={activeTab === 'my' ? userRecipes : savedRecipes}
+                keyExtractor={(item) => item._id}
+                renderItem={({ item }) => (
+                    <RecipeCard
+                        item={item}
+                        onLike={handleLike}
+                        onSave={handleSave}
+                        onDislike={handleDeleteRecipe}
+                        onShare={handleShare}
+                        onPress={item => {
+                            setSelectedRecipe(item);
+                            setDetailModalVisible(true);
+                        }}
+                        userId={user._id}
+                    />
+                )}
+                ListEmptyComponent={
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: '80%' }}>
+                        <Text>No recipes found.</Text>
+                    </View>
+                }
+            />
             {selectedRecipe && (
                 <Modal
                     visible={isModalVisible}

@@ -159,7 +159,13 @@ export const RecipePage = () => {
           const response = await axios.get(`${host}/recipe/user/${user._id}`);
           setUserRecipes(response.data);
         } catch (err) {
-          console.error("Error fetching user recipes:", err);
+          if (err.response?.status === 404) {
+            // no recipes for this user → show an empty list
+            setUserRecipes([]);
+          } else {
+            console.error("Error fetching user recipes:", err);
+            // you can also show a toast or alert here if it’s a real server error
+          }
         }
       };
 
@@ -773,27 +779,27 @@ export const RecipePage = () => {
             {selectedRecipe && (
               <ScrollView contentContainerStyle={styles.modalScroll}>
                 {/* Header with Back Button */}
-<View style={styles.modalHeader}>
-  <TouchableOpacity style={styles.backButton} onPress={closeModal}>
-    <Ionicons name="arrow-back" size={24} color="#333" />
-  </TouchableOpacity>
-</View>
+                <View style={styles.modalHeader}>
+                  <TouchableOpacity style={styles.backButton} onPress={closeModal}>
+                    <Ionicons name="arrow-back" size={24} color="#333" />
+                  </TouchableOpacity>
+                </View>
 
-{/* Recipe Title Centered */}
-<Text style={styles.modalTitleCenter}>{selectedRecipe.name}</Text>
+                {/* Recipe Title Centered */}
+                <Text style={styles.modalTitleCenter}>{selectedRecipe.name}</Text>
 
-{/* Recipe image or wine icon placeholder */}
-{selectedRecipe.imageUrl ? (
-  <Image
-    source={{ uri: selectedRecipe.imageUrl }}
-    style={styles.modalImage}
-    resizeMode="cover"
-  />
-) : (
-  <View style={[styles.modalImage, styles.iconPlaceholder]}>
-    <Ionicons name="wine-outline" size={80} color="#B22222" />
-  </View>
-)}
+                {/* Recipe image or wine icon placeholder */}
+                {selectedRecipe.imageUrl ? (
+                  <Image
+                    source={{ uri: selectedRecipe.imageUrl }}
+                    style={styles.modalImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={[styles.modalImage, styles.iconPlaceholder]}>
+                    <Ionicons name="wine-outline" size={80} color="#B22222" />
+                  </View>
+                )}
                 <View style={styles.divider} />
 
                 {/* Recommended Badge */}
@@ -1420,11 +1426,11 @@ const styles = StyleSheet.create({
     width: 100,
     flexWrap: 'wrap',
   },
-modalTitleCenter: {
-  fontSize: 22,
-  fontWeight: 'bold',
-  textAlign: 'center',
-  color: '#333',
-  marginBottom: 12,
-},
+  modalTitleCenter: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#333',
+    marginBottom: 12,
+  },
 });
