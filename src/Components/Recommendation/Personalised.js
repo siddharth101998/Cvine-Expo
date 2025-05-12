@@ -1,41 +1,48 @@
 // src/Components/Personalized.js
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, Image, StyleSheet, View, ActivityIndicator, } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { host } from '../../API-info/apiifno';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../authContext/AuthContext';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 const Personalized = ({ }) => {
     const navigation = useNavigation();
     const [recommendations, setRecommendations] = useState([]);
     const [loading, setLoading] = useState(true);
-    useEffect(() => {
-        const fetchStoredRecommendations = async () => {
-            try {
-                const stored = await AsyncStorage.getItem('wineRecommendations');
-                console.log("stored", stored)
-                if (stored) {
-                    const parsed = JSON.parse(stored);
+    const { user } = useAuth();
 
-                    const seen = new Set();
-                    const unique = parsed.filter((item) => {
-                        if (seen.has(item.bottleId)) {
-                            return false; // skip duplicate
-                        }
-                        seen.add(item.bottleId);
-                        return true; // keep unique
-                    });
+    const fetchStoredRecommendations = async () => {
+        try {
+            // const all = await loadAllRecommendations();
+            const raw = await AsyncStorage.getItem('wineRecommendations');
+            const parsed = JSON.parse(raw);
+            const me = parsed.find(entry => entry.userid === user?._id);
+            if (me) {
+                const seen = new Set();
+                const unique = me.data.filter((item) => {
+                    if (seen.has(item.bottleId)) {
+                        return false; // skip duplicate
+                    }
+                    seen.add(item.bottleId);
+                    return true; // keep unique
+                });
 
-                    setRecommendations(unique);
+                setRecommendations(unique);
 
-                }
-            } catch (e) {
-                console.error('Failed to load stored recommendations', e);
             }
-        };
+            return;
 
-        fetchStoredRecommendations();
-    }, []);
+        } catch (e) {
+            console.error('Failed to load stored recommendations', e);
+        }
+    };
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchStoredRecommendations();
+        }, [])
+    )
+
 
     return (
         <ScrollView style={styles.inner}>

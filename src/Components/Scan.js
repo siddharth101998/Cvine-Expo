@@ -6,9 +6,11 @@ import axios from 'axios';
 import { host } from '../API-info/apiifno';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
-let pendingUri = null;
+import { useRoute } from '@react-navigation/native';
+//let pendingUri = null;
 
 export const handleScan = async (navigation) => {
+
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
         Alert.alert('Permission required', 'Camera access is needed to scan labels.');
@@ -16,14 +18,18 @@ export const handleScan = async (navigation) => {
     }
 
     const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.7 });
-
+    navigation.navigate('Home');
     if (!result.canceled) {
-        pendingUri = result.assets[0].uri;
-        navigation.navigate('Scan');
+        uri = result.assets[0].uri;
+
+        navigation.navigate('Scan', { uri });
+
     }
 };
 
 const ScanScreen = () => {
+    const { params } = useRoute();
+    const { uri } = params || {};
     const [imageUri, setImageUri] = useState(null);
     const [processing, setProcessing] = useState(false);
     const [wineDetails, setWineDetails] = useState(null);
@@ -33,18 +39,17 @@ const ScanScreen = () => {
         console.log("Bottle selected:", bottleId);
     };
     useEffect(() => {
-        if (pendingUri) {
-            setImageUri(pendingUri);
-            uploadAndProcessImage(pendingUri);
-            pendingUri = null;
+        if (uri) {
+            setImageUri(uri);
+            uploadAndProcessImage(uri);
         }
-    }, []);
+    }, [uri]);
 
     const uploadAndProcessImage = async (uri) => {
         try {
             if (!uri) throw new Error('Image URI is undefined');
             setProcessing(true);
-
+            //setWineDetails([]);
             const blob = await new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
                 xhr.onload = () => resolve(xhr.response);
@@ -88,42 +93,44 @@ const ScanScreen = () => {
                     <Text style={styles.loadingText}>Scanning your wine...</Text>
                 </View>
             )}
-            {wineDetails && Array.isArray(wineDetails) && wineDetails.length === 0 && (
-                <View style={styles.noResultBox}>
-                    <Text style={styles.noResultText}>
-                        Wine not found. The photo may be blurry or not wine-related.
-                    </Text>
-                </View>
-            )}
-            {wineDetails && Array.isArray(wineDetails) && wineDetails.length > 0 && (
-                <View style={styles.listWrapper}>
-                    <ScrollView contentContainerStyle={styles.scrollInner}>
-                        <View style={{ display: 'flex', flex: 'row', mb: 5 }}>
-                            <Text>
-                                <Text style={styles.didYouMeanText}>Did you mean: </Text>
-                                <Text style={styles.highlightedName}>{wineDetails[0].name}?</Text>
-                            </Text>
-                        </View>
+            {!processing && (<>
+                {wineDetails && Array.isArray(wineDetails) && wineDetails.length === 0 && (
+                    <View style={styles.noResultBox}>
+                        <Text style={styles.noResultText}>
+                            Wine not found. The photo may be blurry or not wine-related.
+                        </Text>
+                    </View>
+                )}
+                {wineDetails && Array.isArray(wineDetails) && wineDetails.length > 0 && (
+                    <View style={styles.listWrapper}>
+                        <ScrollView contentContainerStyle={styles.scrollInner}>
+                            <View style={{ display: 'flex', flex: 'row', mb: 5 }}>
+                                <Text>
+                                    <Text style={styles.didYouMeanText}>Did you mean: </Text>
+                                    <Text style={styles.highlightedName}>{wineDetails[0].name}?</Text>
+                                </Text>
+                            </View>
 
 
-                        <View style={styles.cardsWrapper}>
-                            {wineDetails.map((bottle, index) => (
-                                <TouchableOpacity key={bottle._id}
-                                    onPress={() => handleBottleClick(bottle._id)}
-                                >
+                            <View style={styles.cardsWrapper}>
+                                {wineDetails.map((bottle, index) => (
+                                    <TouchableOpacity key={bottle._id}
+                                        onPress={() => handleBottleClick(bottle._id)}
+                                    >
 
-                                    <View key={index} style={styles.card}>
-                                        <Image source={{ uri: bottle.imageUrl }} style={styles.cardImage} />
-                                        <Text style={styles.cardTitle}>{bottle.name}</Text>
-                                    </View>
+                                        <View key={index} style={styles.card}>
+                                            <Image source={{ uri: bottle.imageUrl }} style={styles.cardImage} />
+                                            <Text style={styles.cardTitle}>{bottle.name}</Text>
+                                        </View>
 
-                                </TouchableOpacity>
+                                    </TouchableOpacity>
 
-                            ))}
-                        </View>
-                    </ScrollView>
-                </View>
-            )}
+                                ))}
+                            </View>
+                        </ScrollView>
+                    </View>
+                )}</>)}
+
         </View>
     );
 };

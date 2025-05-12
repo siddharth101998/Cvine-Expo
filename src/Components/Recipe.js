@@ -922,7 +922,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 24,
     fontWeight: 'bold',
-    marginTop:20,
+    marginTop: 20,
   },
   createButton: {
     backgroundColor: '#B22222',
@@ -1086,6 +1086,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 6,
     marginRight: 12,
+    objectFit: 'contain'
   },
   dropdownItemText: {
     fontSize: 16,
@@ -1166,6 +1167,7 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 8,
     marginBottom: 6,
+    objectFit: 'contain'
   },
   selectedBottleCardRemove: {
     position: 'absolute',

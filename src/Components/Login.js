@@ -44,6 +44,11 @@ const LoginScreen = () => {
                 const res = await loginUser(email, password);
                 //fetchUserRecommendations(res._id);
                 login(res);
+                setFirstName("");
+                setEmail("");
+                setPassword("");
+                setIsRegister(false);
+                setIslogin(false)
                 navigation.navigate("Home");
             }
         } catch (err) {
