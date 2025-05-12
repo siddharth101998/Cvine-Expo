@@ -95,13 +95,14 @@ const BottlePage = () => {
                     <Text style={styles.bottleName}>{bottle.name}</Text>
                     <View style={styles.imageWrapper}>
                         <Image source={{ uri: bottle.imageUrl }} style={styles.image} resizeMode="contain" />
-                        <TouchableOpacity onPress={toggleWishlist} style={styles.heartIcon}>
+                        {user && (<TouchableOpacity onPress={toggleWishlist} style={styles.heartIcon}>
                             <Ionicons
                                 name={isWishlisted ? 'heart' : 'heart-outline'}
                                 size={28}
                                 color="#B22222"
                             />
-                        </TouchableOpacity>
+                        </TouchableOpacity>)}
+
                     </View>
 
                     <Text style={styles.descriptionText} numberOfLines={showFullDesc ? undefined : 4}>
