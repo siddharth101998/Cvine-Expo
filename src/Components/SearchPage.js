@@ -124,13 +124,19 @@ const SearchPage = () => {
     };
     const navigation = useNavigation();
     const handleBottleClick = (bottleId) => {
+        setSearchText('');
+        setSelectedCountries([]);
+        setSelectedGrapeTypes([]);
+        setSelectedWineTypes([]);
+        setShowFilters(false);
         navigation.navigate("Bottle", { id: bottleId });
+        debouncedSearch('')
         console.log("Bottle selected:", bottleId);
     };
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
+                <TouchableOpacity onPress={() => navigation.navigate('Home')}>
                     <Ionicons name="arrow-back" size={24} color="black" />
                 </TouchableOpacity>
                 <Text style={styles.title}>Search Wines</Text>
