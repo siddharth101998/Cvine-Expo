@@ -113,7 +113,7 @@ export const RecipePage = () => {
   const [commentText, setCommentText] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
 
   useEffect(() => {
@@ -557,28 +557,24 @@ export const RecipePage = () => {
       </TouchableOpacity>
 
       {/* Recipe List */}
-      {loading ? (
-        <Text style={styles.loadingText}>Loading...</Text>
-      ) : (
-        <FlatList
-          data={recipes}
-          keyExtractor={(item) => item._id}
-          renderItem={({ item }) => (
-            <RecipeCard
-              item={item}
-              onLike={handleLike}
-              onSave={handleSave}
-              onDislike={handleDislike}
-              onShare={handleShare}
-              onPress={openModal}
-              userId={user._id}
-            />
-          )}
-          contentContainerStyle={styles.listContent}
-          numColumns={1}
-          key={1}
-        />
-      )}
+      <FlatList
+        data={recipes}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item }) => (
+          <RecipeCard
+            item={item}
+            onLike={handleLike}
+            onSave={handleSave}
+            onDislike={handleDislike}
+            onShare={handleShare}
+            onPress={openModal}
+            userId={user._id}
+          />
+        )}
+        contentContainerStyle={styles.listContent}
+        numColumns={1}
+        key={1}
+      />
 
       {/* Create Recipe Modal */}
       <Modal
@@ -1365,7 +1361,6 @@ const styles = StyleSheet.create({
   requiredIcon: {
     color: '#e74c3c',
   },
-  // ---- Modal-specific bottle styles ----
   bottleScroll: {
     paddingHorizontal: 16,
     paddingVertical: 8,

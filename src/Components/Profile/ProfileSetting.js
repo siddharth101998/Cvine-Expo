@@ -6,6 +6,7 @@ import axios from 'axios';
 import { host } from '../../API-info/apiifno';
 import { useNavigation } from '@react-navigation/native';
 
+
 const ProfileSetting = () => {
     const navigation = useNavigation();
   const { user, updateUser } = useAuth();
