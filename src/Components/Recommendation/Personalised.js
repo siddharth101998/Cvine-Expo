@@ -11,30 +11,7 @@ const Personalized = ({ }) => {
     const [recommendations, setRecommendations] = useState([]);
     const [loading, setLoading] = useState(true);
     const { user } = useAuth();
-    const loadAllRecommendations = async () => {
-        try {
-            const raw = await AsyncStorage.getItem('wineRecommendations');
-            if (!raw) return [];
 
-            const parsed = JSON.parse(raw);
-
-            // if it’s already an array, use it
-            if (Array.isArray(parsed)) {
-                return parsed;
-            }
-
-            // if it’s a lone object { userid, data }, wrap it
-            if (parsed && parsed.userid && parsed.data) {
-                return [parsed];
-            }
-
-            // otherwise, no usable data
-            return [];
-        } catch (e) {
-            console.error('Failed to parse stored recommendations:', e);
-            return [];
-        }
-    };
     const fetchStoredRecommendations = async () => {
         try {
             // const all = await loadAllRecommendations();
