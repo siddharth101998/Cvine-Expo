@@ -22,7 +22,7 @@ import { signOut } from 'firebase/auth';
 
 // 🔧 Replace this with your actual IP if you're calling a local backend
 
-//const host = "http://localhost:5002"
+// const host = "http://localhost:5002"
 const host = "https://cvine.onrender.com"
 // 🔐 Register User
 export const registerUser = async (email, password, username, fullName) => {
