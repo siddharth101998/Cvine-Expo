@@ -224,9 +224,9 @@ export default function UserRecipes() {
         setDetailModalVisible(false);
     };
 
-    if (userRecipes.length === 0) {
-        return <View style={{ margin: 50 }}><Text>No recipes found.</Text></View>
-    }
+    // if (userRecipes.length === 0) {
+    //     return <View style={{ margin: 50 }}><Text>No recipes found.</Text></View>
+    // }
 
     // Filter bottles for search in edit modal
     const filteredBottles = availableBottles.filter(b =>
@@ -267,6 +267,11 @@ export default function UserRecipes() {
             userId={user._id}
         />
     )}
+    ListEmptyComponent={
+<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: '80%' }}>
+    <Text>No recipes found.</Text>
+</View>
+    }
 />
             {selectedRecipe && (
                 <Modal
