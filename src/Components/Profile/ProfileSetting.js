@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import { logoutUser } from '../../../authservice';
 
 
+
 const ProfileSetting = () => {
   const navigation = useNavigation();
   const { user, updateUser, logout } = useAuth();

@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { FlatList, Dimensions, Text, TouchableOpacity, StyleSheet, View, Modal, TextInput, Button, ScrollView, Image, LayoutAnimation, UIManager, Platform } from "react-native";
+import debounce from 'lodash.debounce';
+import { FlatList, Dimensions, Text, TouchableOpacity, StyleSheet, View, Modal, TextInput, Button, ScrollView, Image, LayoutAnimation, UIManager, KeyboardAvoidingView, Platform } from "react-native";
 import { useAuth } from "../authContext/AuthContext";
 import axios from "axios";
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { host } from '../API-info/apiifno';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 
 
@@ -39,12 +41,15 @@ export default function UserRecipes() {
     const [userRecipes, setUserRecipes] = useState([]);
     const [savedRecipes, setSavedRecipes] = useState([]);
     const [activeTab, setActiveTab] = useState('my'); // 'my' or 'saved'
-    const [loading, setLoading] = useState(true);
     const [selectedRecipe, setSelectedRecipe] = useState(null);
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const { user } = useAuth();
     const navigation = useNavigation();
+    const [availableBottles, setAvailableBottles] = useState([]);
+    const [bottleSearch, setBottleSearch] = useState('');
+    const [bottleSearchText, setBottleSearchText] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
 
     useEffect(() => {
         const fetchUserRecipes = async () => {
@@ -53,8 +58,6 @@ export default function UserRecipes() {
                 setUserRecipes(response.data);
             } catch (error) {
                 console.error("Error fetching user recipes:", error);
-            } finally {
-                setLoading(false);
             }
         };
 
@@ -63,18 +66,45 @@ export default function UserRecipes() {
 
     useEffect(() => {
         const fetchSaved = async () => {
-            setLoading(true);
             try {
-                const res = await axios.get(`${host}/recipe/saved/${user._id}`);
+                const res = await axios.get(`${API_BASE_URL}/recipe/saved/${user._id}`);
                 setSavedRecipes(res.data);
             } catch (err) {
                 console.error('Error fetching saved recipes:', err);
-            } finally {
-                setLoading(false);
             }
         };
         fetchSaved();
     }, [user._id]);
+
+    // Fetch available bottles from backend
+    const fetchBottles = async () => {
+        try {
+            const response = await axios.get(`${host}/bottle/`);
+            setAvailableBottles(Array.isArray(response.data) ? response.data : []);
+        } catch (error) {
+            console.error('Error fetching bottles:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchBottles();
+    }, []);
+
+    // Debounced backend bottle search for edit modal
+    const fetchSearchBottles = async (query) => {
+        if (!query) return setSearchResults([]);
+        try {
+            const resp = await axios.get(`${host}/bottle/search`, { params: { q: query } });
+            setSearchResults(Array.isArray(resp.data.data) ? resp.data.data : []);
+        } catch (err) {
+            console.error('Error searching bottles:', err);
+        }
+    };
+    const debouncedSearch = debounce(fetchSearchBottles, 300);
+    const handleSearchBottle = (text) => {
+        setBottleSearchText(text);
+        debouncedSearch(text);
+    };
 
     const handleEditRecipe = async () => {
         try {
@@ -158,12 +188,14 @@ export default function UserRecipes() {
         setDetailModalVisible(false);
     };
 
-    if (loading) {
-        return <Text>Loading...</Text>;
-    }
     if (userRecipes.length === 0) {
         return <Text>No recipes found.</Text>;
     }
+
+    // Filter bottles for search in edit modal
+    const filteredBottles = availableBottles.filter(b =>
+        b.name.toLowerCase().includes(bottleSearch.toLowerCase())
+    );
 
     return (
         <View style={styles.container}>
@@ -207,54 +239,149 @@ export default function UserRecipes() {
                     transparent={true}
                     onRequestClose={() => setIsModalVisible(false)}
                 >
-                    <ScrollView contentContainerStyle={styles.modalContainer}>
-                        <View style={styles.modalContent}>
-                            <Text style={styles.modalTitle}>Edit Recipe</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={selectedRecipe.name}
-                                onChangeText={(text) => setSelectedRecipe({ ...selectedRecipe, name: text })}
-                                placeholder="Recipe Name"
-                            />
-                            <Text style={styles.modalSubtitle}>Ingredients:</Text>
-                            {selectedRecipe.ingredients.map((ingredient, index) => (
-                                <View key={index} style={styles.ingredientRow}>
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={styles.keyboardAvoidContainer}
+                    >
+                        <View style={styles.modalContainer}>
+                            <View style={styles.modalContent}>
+                                <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
+                                    <Text style={styles.modalTitle}>Edit Recipe</Text>
                                     <TextInput
-                                        style={[styles.input, styles.ingredientInput]}
-                                        value={ingredient.itemName}
-                                        onChangeText={(text) => {
-                                            const updatedIngredients = [...selectedRecipe.ingredients];
-                                            updatedIngredients[index].itemName = text;
-                                            setSelectedRecipe({ ...selectedRecipe, ingredients: updatedIngredients });
-                                        }}
-                                        placeholder="Ingredient Name"
+                                        style={styles.input}
+                                        value={selectedRecipe.name}
+                                        onChangeText={(text) => setSelectedRecipe({ ...selectedRecipe, name: text })}
+                                        placeholder="Recipe Name"
                                     />
+                                    <Text style={styles.modalSubtitle}>Ingredients:</Text>
+                                    {selectedRecipe.ingredients.map((ingredient, index) => (
+                                        <View key={index} style={styles.ingredientRow}>
+                                            <TextInput
+                                                style={[styles.input, styles.ingredientInput]}
+                                                value={ingredient.itemName}
+                                                onChangeText={(text) => {
+                                                    const updatedIngredients = [...selectedRecipe.ingredients];
+                                                    updatedIngredients[index].itemName = text;
+                                                    setSelectedRecipe({ ...selectedRecipe, ingredients: updatedIngredients });
+                                                }}
+                                                placeholder="Ingredient Name"
+                                            />
+                                            <TextInput
+                                                style={[styles.input, styles.quantityInput]}
+                                                value={ingredient.quantity}
+                                                onChangeText={(text) => {
+                                                    const updatedIngredients = [...selectedRecipe.ingredients];
+                                                    updatedIngredients[index].quantity = text;
+                                                    setSelectedRecipe({ ...selectedRecipe, ingredients: updatedIngredients });
+                                                }}
+                                                placeholder="Quantity"
+                                            />
+                                        </View>
+                                    ))}
+                                    <Text style={styles.modalSubtitle}>Method:</Text>
                                     <TextInput
-                                        style={[styles.input, styles.quantityInput]}
-                                        value={ingredient.quantity}
-                                        onChangeText={(text) => {
-                                            const updatedIngredients = [...selectedRecipe.ingredients];
-                                            updatedIngredients[index].quantity = text;
-                                            setSelectedRecipe({ ...selectedRecipe, ingredients: updatedIngredients });
-                                        }}
-                                        placeholder="Quantity"
+                                        style={[styles.input, styles.methodInput]}
+                                        value={selectedRecipe.method}
+                                        onChangeText={(text) => setSelectedRecipe({ ...selectedRecipe, method: text })}
+                                        placeholder="Method"
+                                        multiline
                                     />
+                                    <Text style={styles.modalSubtitle}>Bottles:</Text>
+                                    {/* Debounced bottle search input and dropdown */}
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Search bottles..."
+                                        value={bottleSearchText}
+                                        onChangeText={handleSearchBottle}
+                                    />
+                                    {searchResults.length > 0 && (
+                                        <View style={styles.searchResultsContainer}>
+                                            <ScrollView>
+                                                {searchResults.map((b) => (
+                                                    <TouchableOpacity
+                                                        key={b._id}
+                                                        style={styles.dropdownItem}
+                                                        onPress={() => {
+                                                            setSelectedRecipe(prev => ({
+                                                                ...prev,
+                                                                bottles: prev.bottles
+                                                                    ? [...prev.bottles, { id: b._id, name: b.name, imageUrl: b.imageUrl }]
+                                                                    : [{ id: b._id, name: b.name, imageUrl: b.imageUrl }]
+                                                            }));
+                                                            setBottleSearchText('');
+                                                            setSearchResults([]);
+                                                        }}
+                                                    >
+                                                        {b.imageUrl && <Image source={{ uri: b.imageUrl }} style={styles.dropdownItemImage} />}
+                                                        <Text style={styles.dropdownItemText}>{b.name}</Text>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </ScrollView>
+                                        </View>
+                                    )}
+                                    {/* End debounced bottle search */}
+                                    <Text style={styles.modalSubtitle}>Available Bottles:</Text>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
+                                        {filteredBottles.map((bottle, idx) => (
+                                            <TouchableOpacity
+                                                key={bottle._id}
+                                                style={styles.bottleItem}
+                                                onPress={() => {
+                                                    const newList = selectedRecipe.bottles
+                                                        ? [...selectedRecipe.bottles, { name: bottle.name, imageUrl: bottle.imageUrl, _id: bottle._id }]
+                                                        : [{ name: bottle.name, imageUrl: bottle.imageUrl, _id: bottle._id }];
+                                                    setSelectedRecipe({ ...selectedRecipe, bottles: newList });
+                                                }}
+                                            >
+                                                <Image source={{ uri: bottle.imageUrl }} style={styles.bottleImageModal} resizeMode="contain" />
+                                                <Text style={styles.bottleName} numberOfLines={1}>{bottle.name}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                    <Button
+                                        title="Add New Bottle"
+                                        onPress={() => {
+                                            const newList = selectedRecipe.bottles
+                                                ? [...selectedRecipe.bottles, { name: "", imageUrl: "" }]
+                                                : [{ name: "", imageUrl: "" }];
+                                            setSelectedRecipe({ ...selectedRecipe, bottles: newList });
+                                        }}
+                                    />
+                                    {selectedRecipe.bottles?.map((bottle, index) => (
+                                        <View key={index} style={styles.bottleRow}>
+                                            <TextInput
+                                                style={[styles.input, styles.bottleInput]}
+                                                value={bottle.name}
+                                                onChangeText={(text) => {
+                                                    const updated = [...selectedRecipe.bottles];
+                                                    updated[index].name = text;
+                                                    setSelectedRecipe({ ...selectedRecipe, bottles: updated });
+                                                }}
+                                                placeholder="Bottle Name"
+                                            />
+                                            {bottle.imageUrl ? (
+                                                <Image
+                                                    source={{ uri: bottle.imageUrl }}
+                                                    style={styles.bottleImageInput}
+                                                    resizeMode="cover"
+                                                />
+                                            ) : null}
+                                            <TouchableOpacity onPress={() => {
+                                                const filtered = selectedRecipe.bottles.filter((_, i) => i !== index);
+                                                setSelectedRecipe({ ...selectedRecipe, bottles: filtered });
+                                            }}>
+                                                <Ionicons name="trash-outline" size={24} color="#e74c3c" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    ))}
+                                </ScrollView>
+                                <View style={styles.modalButtons}>
+                                    <Button title="Save" onPress={handleEditRecipe} />
+                                    <Button title="Cancel" onPress={() => setIsModalVisible(false)} />
                                 </View>
-                            ))}
-                            <Text style={styles.modalSubtitle}>Method:</Text>
-                            <TextInput
-                                style={[styles.input, styles.methodInput]}
-                                value={selectedRecipe.method}
-                                onChangeText={(text) => setSelectedRecipe({ ...selectedRecipe, method: text })}
-                                placeholder="Method"
-                                multiline
-                            />
-                            <View style={styles.modalButtons}>
-                                <Button title="Save" onPress={handleEditRecipe} />
-                                <Button title="Cancel" onPress={() => setIsModalVisible(false)} />
                             </View>
                         </View>
-                    </ScrollView>
+                    </KeyboardAvoidingView>
                 </Modal>
             )}
             <Modal
@@ -453,11 +580,12 @@ const styles = StyleSheet.create({
     },
     modalContent: {
         width: SCREEN_WIDTH - 40,
+        height: SCREEN_HEIGHT * 0.8,
         backgroundColor: '#fff',
         borderRadius: 12,
         padding: 20,
         elevation: 5,
-        maxHeight: '90%',
+        overflow: 'hidden',
     },
     modalTitle: {
         fontSize: 20,
@@ -599,4 +727,35 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#f0f0f0',
     },
+    bottleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    bottleInput: {
+        flex: 1,
+        marginRight: 5,
+    },
+    bottleImageInput: {
+        width: 50,
+        height: 50,
+        borderRadius: 4,
+        marginRight: 5,
+    },
+    keyboardAvoidContainer: {
+        flex: 1,
+    },
+    searchResultsContainer: {
+        maxHeight: 180,        // show approx 3 items
+        marginBottom: 10,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        backgroundColor: '#fff',
+        zIndex: 1000,          // ensure it appears above other elements
+    },
+    modalScrollContent: {
+        paddingBottom: 20,
+    },
 });
+

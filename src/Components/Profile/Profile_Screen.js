@@ -31,7 +31,11 @@ const ProfileScreen = () => {
     try {
       const res = await axios.get(`${host}/wishlist/${user._id}`);
       console.log(res.data.bottles)
-      setWishlistBottles(res.data.bottles);
+      // Sort wishlist so newest additions appear first
+      const sorted = Array.isArray(res.data.bottles)
+        ? res.data.bottles.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        : [];
+      setWishlistBottles(sorted);
     } catch (error) {
       console.error("Error fetching wishlist bottles:", error);
     }
@@ -229,6 +233,7 @@ const ProfileScreen = () => {
       <View style={styles.listWrapper}>
         <FlatList
           data={activeTab === 'wishlist' ? wishlistBottles : searchHistory}
+          inverted
           horizontal
           pagingEnabled
           snapToInterval={ITEM_WIDTH + 24}
